@@ -21,11 +21,11 @@ async function handleRequest(request) {
     return handleRegister(request);
   } else if (path.startsWith('http://n9.mcst.io:35834/edit_note/') && method === 'POST') {
     return handleEditNote(request, path.substring(11));
-  } else if (path.startsWith('/delete_note/') && method === 'POST') {
+  } else if (path.startsWith('http://n9.mcst.io:35834/delete_note/') && method === 'POST') {
     return handleDeleteNote(request, path.substring(13));
-  } else if (path === '/admin' && method === 'POST') {
+  } else if (path === 'http://n9.mcst.io:35834/admin' && method === 'POST') {
     return handleAdmin(request);
-  } else if (path === '/logout') {
+  } else if (path === 'http://n9.mcst.io:35834/logout') {
     return handleLogout(request);
   }
 
