@@ -1,5 +1,5 @@
 addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request, env));
+  event.respondWith(handleRequest(event.request, event.env));
 });
 
 async function handleRequest(request, env) {
