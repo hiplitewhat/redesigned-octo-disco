@@ -143,7 +143,7 @@ async function hashPassword(password) {
 }
 
 // --- Image Upload Function ---
-async function uploadImageToGithub(imageFile) {
+async function uploadImageToGithub(imageFile, env) {
   const filename = `${Date.now()}-${imageFile.name}`;
   const path = `images/${filename}`;
   const content = btoa(await imageFile.arrayBuffer());
@@ -152,7 +152,7 @@ async function uploadImageToGithub(imageFile) {
     {
       method: 'PUT',
       headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
+        Authorization: `token ${env.GITHUB_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
