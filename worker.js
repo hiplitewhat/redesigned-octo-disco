@@ -56,7 +56,7 @@ const GITHUB_OWNER = 'Hiplitehehe'; // Replace
 const GITHUB_REPO = 'Note'; // Replace
 const GITHUB_TOKEN = env.GITHUB_TOKEN; // Set as secret in Cloudflare
 
-async function fetchGitHubFile(path) {
+async function fetchGitHubFile(path, env) {
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
   const response = await fetch(url, {
     headers: {
