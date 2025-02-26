@@ -10,6 +10,3 @@ compatibility_date = "2025-02-26"
 
 [build]
 command = ""
-
-[vars]
-ENV = "production"
