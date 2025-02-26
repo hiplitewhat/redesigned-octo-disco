@@ -52,8 +52,8 @@ async function handleRequest(request) {
 }
 
 // --- GitHub Interaction Functions ---
-const GITHUB_OWNER = 'YourGitHubUsername'; // Replace
-const GITHUB_REPO = 'YourRepoName'; // Replace
+const GITHUB_OWNER = 'Hiplitehehe'; // Replace
+const GITHUB_REPO = 'Note'; // Replace
 const GITHUB_TOKEN = GITHUB_TOKEN; // Set as secret in Cloudflare
 
 async function fetchGitHubFile(path) {
