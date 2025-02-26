@@ -1,4 +1,4 @@
-addEventListener('fetch', event => {
+CaddEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request));
 });
 
