@@ -72,13 +72,13 @@ async function fetchGitHubFile(path, env) {
   return [content, data.sha];
 }
 
-async function updateGitHubFile(path, content, sha, message) {
+async function updateGitHubFile(path, content, sha, message, env) {
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
   const encodedContent = btoa(JSON.stringify(content, null, 4));
   return fetch(url, {
     method: 'PUT',
     headers: {
-      Authorization: `token ${GITHUB_TOKEN}`,
+      Authorization: `token ${env.GITHUB_TOKEN}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ message, content: encodedContent, sha }),
