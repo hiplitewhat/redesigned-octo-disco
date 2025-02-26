@@ -44,176 +44,146 @@ async function handleRequest(request) {
     return renderTemplate('register.html');
   } else if (path.startsWith('/edit_note/')) {
     return handleEditNote(request, path.substring(11));
-  } else if (path === '/admin'){
+  } else if (path === '/admin') {
     return handleAdmin(request);
   }
 
   return new Response('Not Found', { status: 404 });
 }
 
-async function handleLogin(request) {
-  const formData = await request.formData();
-  const username = formData.get('username');
-  const password = formData.get('password');
+// --- GitHub Interaction Functions ---
+const GITHUB_OWNER = 'YourGitHubUsername'; // Replace
+const GITHUB_REPO = 'YourRepoName'; // Replace
+const GITHUB_TOKEN = GITHUB_TOKEN; // Set as secret in Cloudflare
 
-  const users = await getUsers();
-  const user = users.find(u => u.username === username);
+async function fetchGitHubFile(path) {
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `token ${GITHUB_TOKEN}`,
+      Accept: 'application/vnd.github.v3.raw+json',
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${path}: ${response.status} ${response.statusText}`);
+  }
+  const data = await response.json();
+  const content = JSON.parse(atob(data.content));
+  return [content, data.sha];
+}
 
-  if (user && await verifyPassword(password, user.password)) {
-    const sessionToken = await createSession(user.id);
-    return Response.redirect('/dashboard', 302, {
-      headers: { 'Set-Cookie': `session=${sessionToken}; Path=/; HttpOnly; Max-Age=2592000` } // 30 days
+async function updateGitHubFile(path, content, sha, message) {
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+  const encodedContent = btoa(JSON.stringify(content, null, 4));
+  return fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${GITHUB_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message, content: encodedContent, sha }),
+  });
+}
+
+// --- Data Access Functions ---
+async function getNotes() {
+  return fetchGitHubFile('Notes.json');
+}
+
+async function saveNotes(notes, message) {
+  const [_, sha] = await getNotes();
+  return updateGitHubFile('Notes.json', notes, sha, message);
+}
+
+async function getUsers() {
+  return fetchGitHubFile('Users.json');
+}
+
+async function saveUsers(users, message) {
+  const [_, sha] = await getUsers();
+  return updateGitHubFile('Users.json', users, sha, message);
+}
+
+// --- User Authentication and Session Functions ---
+async function getUserById(userId) {
+  const [users, _] = await getUsers();
+  return users.find(user => user.id === parseInt(userId));
+}
+
+async function createSession(userId) {
+  // Simple session token generation (replace with a more secure method)
+  return btoa(`${userId}:${Date.now()}`);
+}
+
+async function getSession(request) {
+  const cookieHeader = request.headers.get('Cookie');
+  if (!cookieHeader) return null;
+  const sessionCookie = cookieHeader
+    .split(';')
+    .find(cookie => cookie.trim().startsWith('session='));
+  if (!sessionCookie) return null;
+  const sessionToken = sessionCookie.split('=')[1];
+  if (!sessionToken) return null;
+  try {
+    const [userId, _] = atob(sessionToken).split(':');
+    return { userId: parseInt(userId) };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function verifyPassword(password, hashedPassword) {
+  // Simple password verification (replace with bcrypt or similar)
+  return password === hashedPassword;
+}
+
+async function hashPassword(password) {
+  // Simple password hashing (replace with bcrypt or similar)
+  return password;
+}
+
+// --- Image Upload Function ---
+async function uploadImageToGithub(imageFile) {
+  const filename = `${Date.now()}-${imageFile.name}`;
+  const path = `images/${filename}`;
+  const content = btoa(await imageFile.arrayBuffer());
+  const response = await fetch(
+    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `Upload image ${filename}`,
+        content: content,
+      }),
+    }
+  );
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.content.download_url;
+}
+
+// --- Roblox Game Info Function (Placeholder) ---
+async function getRobloxGameInfo(universeId) {
+  // Replace with actual Roblox API calls
+  return [`Game ${universeId}`, 'https://via.placeholder.com/150'];
+}
+
+// --- Rendering Function (Placeholder) ---
+function renderTemplate(templateName, data = {}) {
+  // Replace with a template engine or simple string interpolation
+  let html = `<h1>${templateName}</h1>`;
+  if (data.error) html += `<p style="color: red;">${data.error}</p>`;
+  if (data.userNotes) {
+    html += '<ul>';
+    data.userNotes.forEach(note => {
+      html += `<li><a href="/view_note/${note.title}">${note.title}</a></li>`;
     });
-  } else {
-    return renderTemplate('login.html', { error: 'Invalid credentials' });
+    html += '</ul>';
   }
+  return new Response(html, { headers: { 'Content-Type': 'text/html' } });
 }
-
-async function handleDashboard(request) {
-  const session = await getSession(request);
-  const user = session ? await getUserById(session.userId) : null;
-  const notes = await getNotes();
-  const searchParams = new URL(request.url).searchParams;
-  const searchQuery = searchParams.get('search')?.toLowerCase() || '';
-
-  let userNotes = notes;
-
-  if (user) {
-    userNotes = notes.filter(note => note.user === user.username && !note.pending_approval);
-  } else {
-    userNotes = notes.filter(note => !note.pending_approval);
-  }
-
-  if (searchQuery) {
-    userNotes = userNotes.filter(note =>
-      note.title.toLowerCase().includes(searchQuery) || note.content.toLowerCase().includes(searchQuery)
-    );
-  }
-
-  return renderTemplate('dashboard.html', { userNotes, user, is_admin: user && user.is_admin });
-}
-
-async function handleViewNote(request, title) {
-  const session = await getSession(request);
-  const user = session ? await getUserById(session.userId) : null;
-  const notes = await getNotes();
-  const note = notes.find(n => n.title === title);
-
-  if (!note) {
-    return renderTemplate('error.html', { message: 'Note not found' });
-  }
-
-  if (request.method === 'POST' && user) {
-    const formData = await request.formData();
-    const commentContent = formData.get('comment');
-
-    if (commentContent) {
-      note.comments = note.comments || [];
-      note.comments.push({
-        user: user.username,
-        content: commentContent,
-        created_at: new Date().toISOString()
-      });
-
-      await saveNotes(notes, `Added comment to '${title}' by ${user.username}`);
-      return Response.redirect(`/view_note/${title}`, 302);
-    } else {
-      return renderTemplate('view_note.html', { note, user, error: 'Comment cannot be empty' });
-    }
-  }
-
-  return renderTemplate('view_note.html', { note, user });
-}
-
-async function handleRawNote(request, title) {
-  const notes = await getNotes();
-  const note = notes.find(n => n.title === title);
-
-  if (note) {
-    return new Response(note.content);
-  } else {
-    return new Response('Note not found', { status: 404 });
-  }
-}
-
-async function handleNewNote(request) {
-  const session = await getSession(request);
-  const user = session ? await getUserById(session.userId) : null;
-
-  if (!user) {
-    return Response.redirect('/login', 302);
-  }
-
-  const formData = await request.formData();
-  const title = formData.get('title');
-  const content = formData.get('content');
-  const universeId = formData.get('universe_id');
-  const imageFile = formData.get('image');
-
-  const [gameTitle, gameImageUrl] = await getRobloxGameInfo(universeId);
-  if (!gameTitle || !gameImageUrl) {
-    return renderTemplate('new_note.html', { error: 'Game details not found.' });
-  }
-
-  let noteImageUrl = null;
-  if (imageFile && imageFile.type.startsWith('image/')) {
-    noteImageUrl = await uploadImageToGithub(imageFile);
-    if (!noteImageUrl) {
-      return renderTemplate('new_note.html', { error: 'Error uploading image to GitHub.' });
-    }
-  }
-
-  const notes = await getNotes();
-  const newNote = {
-    title,
-    content,
-    user: user.username,
-    game_name: gameTitle,
-    game_image_url: gameImageUrl,
-    note_image_url: noteImageUrl,
-    universe_id: universeId,
-    comments: [],
-    pending_approval: true
-  };
-  notes.push(newNote);
-
-  await saveNotes(notes, `Added note '${title}' by ${user.username}, pending approval`);
-  return Response.redirect('/dashboard', 302);
-}
-
-async function handleRegister(request) {
-  const formData = await request.formData();
-  const username = formData.get('username');
-  const password = formData.get('password');
-
-  const users = await getUsers();
-  if (users.find(u => u.username === username)) {
-    return renderTemplate('register.html', { error: 'Username already exists.' });
-  }
-
-  const hashedPassword = await hashPassword(password);
-  const newUser = {
-    id: users.length + 1,
-    username,
-    password: hashedPassword,
-    is_admin: false
-  };
-  users.push(newUser);
-
-  await saveUsers(users, `Added user ${username}`);
-  return Response.redirect('/login', 302);
-}
-
-async function handleEditNote(request, title) {
-  const session = await getSession(request);
-  const user = session ? await getUserById(session.userId) : null;
-
-  if (!user) {
-    return Response.redirect('/login', 302);
-  }
-
-  const notes = await getNotes();
-  const note = notes.find(n => n.title === title && (n.user === user.username || user.is_admin));
-
-  if (!note) {
-    return renderTemplate('error.html', { message: 'Note not found
+//Rest of the code.
