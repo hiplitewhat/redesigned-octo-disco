@@ -60,7 +60,7 @@ async function fetchGitHubFile(path) {
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
   const response = await fetch(url, {
     headers: {
-      Authorization: `token ${GITHUB_TOKEN}`,
+      Authorization: `token ${env.GITHUB_TOKEN}`,
       Accept: 'application/vnd.github.v3.raw+json',
     },
   });
