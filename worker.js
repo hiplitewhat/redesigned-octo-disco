@@ -2,7 +2,7 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request));
 });
 
-async function handleRequest(request) {
+async function handleRequest(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
@@ -54,7 +54,7 @@ async function handleRequest(request) {
 // --- GitHub Interaction Functions ---
 const GITHUB_OWNER = 'Hiplitehehe'; // Replace
 const GITHUB_REPO = 'Note'; // Replace
-const GITHUB_TOKEN = GITHUB_TOKEN; // Set as secret in Cloudflare
+const GITHUB_TOKEN = env.GITHUB_TOKEN; // Set as secret in Cloudflare
 
 async function fetchGitHubFile(path) {
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
