@@ -7,19 +7,19 @@ async function handleRequest(request) {
   const path = url.pathname;
   const method = request.method;
 
-  if (path === '/login' && method === 'POST') {
+  if (path === 'http://n9.mcst.io:35834/login' && method === 'POST') {
     return handleLogin(request);
-  } else if (path === '/dashboard') {
+  } else if (path === 'http://n9.mcst.io:35834/dashboard') {
     return handleDashboard(request);
-  } else if (path.startsWith('/view_note/')) {
+  } else if (path.startsWith('http://n9.mcst.io:35834/view_note/')) {
     return handleViewNote(request, path.substring(11));
-  } else if (path.startsWith('/raw_note/')) {
+  } else if (path.startsWith('http://n9.mcst.io:35834/raw_note/')) {
     return handleRawNote(request, path.substring(10));
-  } else if (path === '/new_note' && method === 'POST') {
+  } else if (path === 'http://n9.mcst.io:35834/new_note' && method === 'POST') {
     return handleNewNote(request);
-  } else if (path === '/register' && method === 'POST') {
+  } else if (path === 'http://n9.mcst.io:35834/register' && method === 'POST') {
     return handleRegister(request);
-  } else if (path.startsWith('/edit_note/') && method === 'POST') {
+  } else if (path.startsWith('http://n9.mcst.io:35834/edit_note/') && method === 'POST') {
     return handleEditNote(request, path.substring(11));
   } else if (path.startsWith('/delete_note/') && method === 'POST') {
     return handleDeleteNote(request, path.substring(13));
