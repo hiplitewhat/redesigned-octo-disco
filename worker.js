@@ -148,13 +148,13 @@ async function hashPassword(password) {
   return password;
 }
 
-// --- Image Upload Function ---
+// --- Image Upload Function 
 async function uploadImageToGithub(GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN, imageFile) {
-  const filename = `<span class="math-inline">\{Date\.now\(\)\}\-</span>{imageFile.name}`;
+  const filename = `${Date.now()}-${imageFile.name}`;
   const path = `images/${filename}`;
   const content = btoa(await imageFile.arrayBuffer());
   const response = await fetch(
-    `https://api.github.com/repos/<span class="math-inline">\{GITHUB\_OWNER\}/</span>{GITHUB_REPO}/contents/${path}`,
+    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
     {
       method: 'PUT',
       headers: {
@@ -165,4 +165,12 @@ async function uploadImageToGithub(GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN, imag
         message: `Upload image ${filename}`,
         content: content,
       }),
-    })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload image: ${response.status} ${response.statusText}`);
+  }
+  
+  return await response.json();
+}
