@@ -28,12 +28,42 @@ async function handleRequest(request) {
 }
 
 // Homepage (shows note links & login/register form)
-async function handleIndex(userAgent) {
+async function handleIndex(request, userAgent) {
   try {
+    // Get session data (assuming you use cookies for authentication)
+    const cookieHeader = request.headers.get("Cookie") || "";
+    const sessionUser = getSessionUser(cookieHeader);
+
     const notes = await getNotesFromGitHub(userAgent);
     const noteLinks = Object.keys(notes)
       .map(noteId => `<li><a href="/note/${noteId}">${noteId}</a></li>`)
       .join('');
+
+    let loginSection = `
+      <h2>Login</h2>
+      <form action="/login" method="POST">
+        <input type="text" name="username" placeholder="Username" required><br>
+        <input type="password" name="password" placeholder="Password" required><br>
+        <input type="submit" value="Login">
+      </form>
+
+      <h2>Register</h2>
+      <form action="/register" method="POST">
+        <input type="text" name="username" placeholder="Username" required><br>
+        <input type="password" name="password" placeholder="Password" required><br>
+        <input type="submit" value="Register">
+      </form>
+    `;
+
+    // If user is logged in, show logout button instead of login/register forms
+    if (sessionUser) {
+      loginSection = `
+        <p>Welcome, ${sessionUser}!</p>
+        <form action="/logout" method="POST">
+          <input type="submit" value="Logout">
+        </form>
+      `;
+    }
 
     let html = `
       <!DOCTYPE html>
@@ -43,19 +73,14 @@ async function handleIndex(userAgent) {
         <h1>Code Notes</h1>
         <ul>${noteLinks}</ul>
 
-        <h2>Login</h2>
-        <form action="/login" method="POST">
-          <input type="text" name="username" placeholder="Username" required><br>
-          <input type="password" name="password" placeholder="Password" required><br>
-          <input type="submit" value="Login">
+        <h2>Make a New Note</h2>
+        <form action="/save" method="POST">
+          <input type="text" name="noteId" placeholder="Note ID" required><br>
+          <textarea name="content" rows="5" cols="30" placeholder="Write your note here..." required></textarea><br>
+          <input type="submit" value="Save Note">
         </form>
 
-        <h2>Register</h2>
-        <form action="/register" method="POST">
-          <input type="text" name="username" placeholder="Username" required><br>
-          <input type="password" name="password" placeholder="Password" required><br>
-          <input type="submit" value="Register">
-        </form>
+        ${loginSection} <!-- Show login/register if not logged in, else show logout -->
       </body>
       </html>
     `;
