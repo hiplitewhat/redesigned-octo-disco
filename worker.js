@@ -218,11 +218,32 @@ async function handleSave(request, userAgent) {
 }
 
 // Handle viewing a note
-async function handleNote(noteId, userAgent) {
-  const notes = await getNotesFromGitHub(userAgent);
-  if (!notes[noteId]) return new Response("Note Not Found", { status: 404 });
+async function handleNote(path, userAgent) {
+    try {
+        const noteId = path.substring(6); // Extract note ID from "/note/{noteId}"
+        const notes = await getNotesFromGitHub(userAgent);
 
-  return new Response(`<h1>${noteId}</h1><p>${notes[noteId]}</p>`, {
-    headers: { "Content-Type": "text/html" },
-  });
+        if (!notes[noteId]) {
+            return new Response("Note Not Found", { status: 404 });
+        }
+
+        const noteContent = notes[noteId];
+
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head><title>Note: ${noteId}</title></head>
+            <body>
+                <h1>Note: ${noteId}</h1>
+                <pre>${noteContent}</pre>
+                <a href="/">Back to Notes</a>
+            </body>
+            </html>
+        `;
+
+        return new Response(html, { headers: { "Content-Type": "text/html" } });
+    } catch (error) {
+        console.error("Error in handleNote:", error);
+        return new Response("Internal Server Error", { status: 500 });
+    }
 }
