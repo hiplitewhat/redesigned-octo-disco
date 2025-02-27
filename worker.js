@@ -97,16 +97,19 @@ async function handleIndex(request, userAgent) {
 }
 
 // **Note Handling**
-async function handleNote(path, userAgent) {
+async function handleNote(path, request, userAgent) {
   try {
-    const noteId = path.substring(6);
-    const notes = await getNotesFromGitHub(userAgent);
+    const noteId = path.replace('/note/', ''); // Ensure correct ID extraction
+    if (!noteId) {
+      return new Response("Invalid Note ID", { status: 400 });
+    }
 
+    const notes = await getNotesFromGitHub(userAgent);
     if (!notes[noteId]) {
       return new Response("Note Not Found", { status: 404 });
     }
 
-    return new Response(`
+    const html = `
       <!DOCTYPE html>
       <html>
       <head><title>Note: ${noteId}</title></head>
@@ -116,7 +119,9 @@ async function handleNote(path, userAgent) {
         <a href="/">Back</a>
       </body>
       </html>
-    `, { headers: { "Content-Type": "text/html" } });
+    `;
+
+    return new Response(html, { headers: { "Content-Type": "text/html" } });
   } catch (error) {
     console.error("Error in handleNote:", error);
     return new Response("Internal Server Error", { status: 500 });
@@ -125,18 +130,17 @@ async function handleNote(path, userAgent) {
 
 async function handleSave(request, userAgent) {
   try {
-    const cookieHeader = request.headers.get("Cookie") || "";
-    const sessionUser = getSessionUser(cookieHeader);
-    if (!sessionUser) return new Response("Unauthorized", { status: 401 });
-
     const formData = await request.formData();
-    const noteId = formData.get("noteId");
-    const content = formData.get("content");
+    const noteId = formData.get("noteId")?.trim();
+    const content = formData.get("content")?.trim();
 
-    if (!noteId || !content) return new Response("Missing Data", { status: 400 });
+    if (!noteId || !content) {
+      return new Response("Missing Note ID or Content", { status: 400 });
+    }
 
     const notes = await getNotesFromGitHub(userAgent);
     notes[noteId] = content;
+
     await saveNotesToGitHub(notes, userAgent);
 
     return Response.redirect(`/note/${noteId}`, 302);
@@ -144,26 +148,6 @@ async function handleSave(request, userAgent) {
     console.error("Error in handleSave:", error);
     return new Response("Internal Server Error", { status: 500 });
   }
-}
-
-// **User Authentication**
-async function handleRegister(request, userAgent) {
-  const formData = await request.formData();
-  const username = formData.get('username').trim();
-  const password = formData.get('password').trim();
-
-  if (!username || !password) return new Response('Missing Data', { status: 400 });
-
-  const users = await getUsersFromGitHub(userAgent);
-
-  if (users[username]) return new Response('User Exists', { status: 409 });
-
-  // Store as hashed password (or at least a better encoding)
-  users[username] = btoa(unescape(encodeURIComponent(password)));
-
-  await saveUsersToGitHub(users, userAgent);
-
-  return new Response('Registration successful', { status: 200 });
 }
 
 async function handleLogin(request, userAgent) {
