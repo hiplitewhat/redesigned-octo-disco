@@ -60,10 +60,23 @@ async function getAllNotes(userAgent) {
 }
 
 // Serve static HTML file
-async function serveStaticFile(filename) {
-  return new Response(await fetch(`https://raw.githubusercontent.com/Hiplitehehe/Notes/refs/heads/main/${filename}`).then(res => res.text()), {
-    headers: { "Content-Type": "text/html" }
-  });
+async function serveStaticFile(filename, replacements = {}) {
+  try {
+    const response = await fetch(`https://yourdomain.com/${filename}`); // Adjust this URL
+    if (!response.ok) throw new Error(`Failed to fetch ${filename}`);
+
+    let content = await response.text();
+
+    // Replace placeholders
+    Object.keys(replacements).forEach(key => {
+      content = content.replace(`{{${key}}}`, replacements[key]);
+    });
+
+    return new Response(content, { headers: { "Content-Type": "text/html" } });
+  } catch (error) {
+    console.error("Error in serveStaticFile:", error);
+    return new Response("Error loading page", { status: 500 });
+  }
 }
 
 // Get session user from cookies
