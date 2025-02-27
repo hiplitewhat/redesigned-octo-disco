@@ -165,5 +165,4 @@ async function uploadImageToGithub(GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN, imag
         message: `Upload image ${filename}`,
         content: content,
       }),
-    }
-)
+    })
