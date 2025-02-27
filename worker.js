@@ -7,15 +7,17 @@ addEventListener("fetch", (event) => {
   event.respondWith(handleRequest(event.request));
 });
 
-async function handleIndex(request, userAgent) {
+async function handleIndex(userAgent) {
   try {
     const notes = await getNotesFromGitHub(userAgent);
+
+    // Generate a list of note links (without content)
     const noteLinks = Object.keys(notes)
       .map(noteId => `<li><a href="/note/${noteId}">${noteId}</a></li>`)
       .join('');
 
-    let html = await fetchHtmlFile('index.html');
-    html = html.replace("{{NOTE_LINKS}}", noteLinks);
+    let html = await serveStaticFile("index.html");
+    html = html.replace("{{NOTES}}", noteLinks);
 
     return new Response(html, { headers: { "Content-Type": "text/html" } });
   } catch (error) {
