@@ -40,31 +40,6 @@ async function getAllNotes(userAgent) {
   });
 }
 
-async function handleRequest(request) {
-  const url = new URL(request.url);
-  const path = url.pathname;
-  const userAgent = request.headers.get("User-Agent");
-
-  try {
-    if (path === "/") {
-      return serveStaticFile("index.html");
-    } else if (path.startsWith("/note/")) {
-      return handleNote(path.substring(6), userAgent);
-    } else if (path === "/save" && request.method === "POST") {
-      return handleSave(request, userAgent);
-    } else if (path === "/login" && request.method === "POST") {
-      return handleLogin(request, userAgent);
-    } else if (path === "/register" && request.method === "POST") {
-      return handleRegister(request, userAgent);
-    } else {
-      return new Response("Not Found", { status: 404 });
-    }
-  } catch (error) {
-    console.error("Error in handleRequest:", error);
-    return new Response("Internal Server Error", { status: 500 });
-  }
-}
-
 // Serve static HTML file
 async function serveStaticFile(filename) {
   return new Response(await fetch(`https://raw.githubusercontent.com/Hiplitehehe/Notes/refs/heads/main/${filename}`).then(res => res.text()), {
