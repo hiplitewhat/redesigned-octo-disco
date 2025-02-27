@@ -92,3 +92,107 @@ async function handleNote(noteId, userAgent) {
     return new Response('Internal Server Error', { status: 500 });
   }
 }
+
+async function handleSave(request, userAgent) {
+  try {
+    const formData = await request.formData();
+    const noteId = formData.get('noteId');
+    const content = formData.get('content');
+
+    if (!noteId || !content) {
+      return new Response('Missing Note ID or Content', { status: 400 });
+    }
+
+    const notes = await getNotesFromGitHub(userAgent);
+    notes[noteId] = content;
+    await saveNotesToGitHub(notes, userAgent);
+
+    return Response.redirect(`/note/${noteId}`, 302);
+  } catch (error) {
+    console.error('Error in handleSave:', error);
+    return new Response('Internal Server Error', { status: 500 });
+  }
+}
+
+// ------------------------- User Authentication -------------------------
+
+async function handleRegister(request, userAgent) {
+  return new Response('Registration feature coming soon.', { status: 501 });
+}
+
+async function handleLogin(request, userAgent) {
+  return new Response('Login feature coming soon.', { status: 501 });
+}
+
+function handleLogout() {
+  return new Response('Logged out', {
+    headers: {
+      'Set-Cookie': 'session=; Max-Age=0; Path=/;',
+    },
+  });
+}
+
+// ------------------------- GitHub Interaction -------------------------
+
+const GITHUB_TOKEN = 'YOUR_GITHUB_TOKEN';
+const GITHUB_OWNER = 'Hiplitehehe';
+const GITHUB_REPO = 'Notes';
+const GITHUB_FILE = 'notes.json';
+
+async function getNotesFromGitHub(userAgent) {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App',
+      },
+    });
+    const data = await response.json();
+    
+    if (data && data.content) {
+      return JSON.parse(atob(data.content));
+    } else {
+      return {}; // Return empty object if file doesn't exist or is empty
+    }
+  } catch (error) {
+    console.error('Error getting notes:', error);
+    return {};
+  }
+}
+
+async function saveNotesToGitHub(notes, userAgent) {
+  try {
+    const existingFile = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App',
+      },
+    });
+
+    let sha = undefined;
+    if (existingFile.ok) {
+      const data = await existingFile.json();
+      sha = data.sha;
+    }
+
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+        'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App',
+      },
+      body: JSON.stringify({
+        message: 'Update notes',
+        content: btoa(JSON.stringify(notes)),
+        sha: sha,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Error saving notes:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error saving notes:', error);
+  }
+}
