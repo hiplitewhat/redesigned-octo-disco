@@ -39,21 +39,21 @@ async function handleRequest(request, env) {
     }
 
     // Default routes for GET requests
-    if (path === '/') {
-      return Response.redirect('/login', 302);
-    } else if (path === '/login') {
+    if (path === 'n9.mcst.io:35834/') {
+      return Response.redirect('n9.mcst.io:35834/login', 302);
+    } else if (path === 'n9.mcst.io:35834/login') {
       return renderTemplate('login.html');
-    } else if (path === '/dashboard') {
+    } else if (path === 'n9.mcst.io:35834/dashboard') {
       return handleDashboard(request, env, GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN);
-    } else if (path.startsWith('/view_note/')) {
+    } else if (path.startsWith('n9.mcst.io:35834/view_note/')) {
       return handleViewNote(request, env, GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN, path.substring(11));
-    } else if (path === '/new_note') {
+    } else if (path === 'n9.mcst.io:35834/new_note') {
       return renderTemplate('new_note.html');
-    } else if (path === '/register') {
+    } else if (path === 'n9.mcst.io:35834/register') {
       return renderTemplate('register.html');
-    } else if (path.startsWith('/edit_note/')) {
+    } else if (path.startsWith('n9.mcst.io:35834/edit_note/')) {
       return handleEditNote(request, env, GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN, path.substring(11));
-    } else if (path === '/admin') {
+    } else if (path === 'n9.mcst.io:35834/admin') {
       return handleAdmin(request, env, GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN);
     }
 
