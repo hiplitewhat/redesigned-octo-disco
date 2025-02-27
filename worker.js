@@ -1,254 +1,61 @@
-const GITHUB_TOKEN = "your_personal_access_token_here";
-const REPO_OWNER = "Hiplitehehe";
-const REPO_NAME = "Notes";
-
-// Handles incoming requests
-addEventListener("fetch", (event) => {
-  event.respondWith(handleRequest(event.request));
-});
-
-async function handleIndex(userAgent) {
-  try {
-    const notes = await getNotesFromGitHub(userAgent);
-
-    // Generate a list of note links (without content)
-    const noteLinks = Object.keys(notes)
-      .map(noteId => `<li><a href="/note/${noteId}">${noteId}</a></li>`)
-      .join('');
-
-    let html = await serveStaticFile("index.html");
-    html = html.replace("{{NOTES}}", noteLinks);
-
-    return new Response(html, { headers: { "Content-Type": "text/html" } });
-  } catch (error) {
-    console.error("Error in handleIndex:", error);
-    return new Response("Internal Server Error", { status: 500 });
-  }
-}
-
-async function handleRequest(request) {
-  const url = new URL(request.url);
-  const path = url.pathname;
-  const userAgent = request.headers.get("User-Agent");
-
-  try {
-    if (path === "/") {
-      return serveStaticFile("index.html");
-    } else if (path === "/get-notes") {
-      return getAllNotes(userAgent);
-    } else if (path === "/save" && request.method === "POST") {
-      return handleSave(request, userAgent);
-    } else if (path === "/login" && request.method === "POST") {
-      return handleLogin(request, userAgent);
-    } else if (path === "/register" && request.method === "POST") {
-      return handleRegister(request, userAgent);
-    } else {
-      return new Response("Not Found", { status: 404 });
-    }
-  } catch (error) {
-    console.error("Error in handleRequest:", error);
-    return new Response("Internal Server Error", { status: 500 });
-  }
-}
-
-// Fetch and return all notes
-async function getAllNotes(userAgent) {
-  const notes = await getNotesFromGitHub(userAgent);
-  return new Response(JSON.stringify(notes), {
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-// Serve static HTML file
-async function serveStaticFile(filename, replacements = {}) {
-  try {
-    const response = await fetch(`https://yourdomain.com/${filename}`); // Adjust this URL
-    if (!response.ok) throw new Error(`Failed to fetch ${filename}`);
-
-    let content = await response.text();
-
-    // Replace placeholders
-    Object.keys(replacements).forEach(key => {
-      content = content.replace(`{{${key}}}`, replacements[key]);
-    });
-
-    return new Response(content, { headers: { "Content-Type": "text/html" } });
-  } catch (error) {
-    console.error("Error in serveStaticFile:", error);
-    return new Response("Error loading page", { status: 500 });
-  }
-}
-
-// Get session user from cookies
-function getSessionUser(cookieHeader) {
-  const cookies = Object.fromEntries(cookieHeader.split("; ").map(c => c.split("=")));
-  return cookies.sessionUser || null;
-}
-
-// Set session cookie
-function setSessionCookie(username) {
-  return `sessionUser=${username}; Path=/; HttpOnly`;
-}
-
-// Clear session cookie
-function clearSessionCookie() {
-  return `sessionUser=; Path=/; HttpOnly; Max-Age=0`;
-}
-
-// Fetch users from GitHub
-async function getUsersFromGitHub(userAgent) {
-  return fetchGitHubFile("K.json", userAgent);
-}
-
-// Save users to GitHub
-async function saveUsersToGitHub(users, userAgent) {
-  return saveGitHubFile("K.json", users, userAgent);
-}
-
-// Fetch notes from GitHub
-async function getNotesFromGitHub(userAgent) {
-  return fetchGitHubFile("j.json", userAgent);
-}
-
-// Save notes to GitHub
-async function saveNotesToGitHub(notes, userAgent) {
-  return saveGitHubFile("j.json", notes, userAgent);
-}
-
-// Fetch a file from GitHub
-async function fetchGitHubFile(filename, userAgent) {
-  try {
-    const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, {
-      headers: { Authorization: `token ${GITHUB_TOKEN}`, "User-Agent": userAgent },
-    });
-
-    if (!response.ok) return {};
-
-    const data = await response.json();
-    return JSON.parse(atob(data.content));
-  } catch (error) {
-    console.error(`Error fetching ${filename}:`, error);
-    return {};
-  }
-}
-
-// Save a file to GitHub
-async function saveGitHubFile(filename, data, userAgent) {
-  try {
-    const existingFile = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, {
-      headers: { Authorization: `token ${GITHUB_TOKEN}`, "User-Agent": userAgent },
-    });
-
-    let sha = undefined;
-    if (existingFile.ok) {
-      const fileData = await existingFile.json();
-      sha = fileData.sha;
-    }
-
-    await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
-        "Content-Type": "application/json",
-        "User-Agent": userAgent,
-      },
-      body: JSON.stringify({
-        message: `Update ${filename}`,
-        content: btoa(JSON.stringify(data)),
-        sha: sha,
-      }),
-    });
-  } catch (error) {
-    console.error(`Error saving ${filename}:`, error);
-  }
-}
-
-// Handle login
-async function handleLogin(request, userAgent) {
-  const formData = await request.formData();
-  const username = formData.get("username");
-  const password = formData.get("password");
-
-  if (!username || !password) return new Response("Missing Username or Password", { status: 400 });
-
-  const users = await getUsersFromGitHub(userAgent);
-
-  if (users[username] && users[username] === btoa(password)) {
-    const headers = new Headers();
-    headers.append("Set-Cookie", setSessionCookie(username));
-    headers.append("Content-Type", "text/plain");
-
-    return new Response("Login Successful", { status: 200, headers });
-  } else {
-    return new Response("Unauthorized", { status: 401 });
-  }
-}
-
-// Handle register
-async function handleRegister(request, userAgent) {
-  const formData = await request.formData();
-  const username = formData.get("username");
-  const password = formData.get("password");
-
-  if (!username || !password) return new Response("Missing Username or Password", { status: 400 });
-
-  const users = await getUsersFromGitHub(userAgent);
-
-  if (users[username]) return new Response("Username already exists", { status: 409 });
-
-  users[username] = btoa(password);
-  await saveUsersToGitHub(users, userAgent);
-
-  return new Response("Registration successful", { status: 200 });
-}
-
-// Handle saving a note
-async function handleSave(request, userAgent) {
-  const cookieHeader = request.headers.get("Cookie") || "";
-  const sessionUser = getSessionUser(cookieHeader);
-
-  if (!sessionUser) return new Response("Unauthorized", { status: 401 });
-
-  const formData = await request.formData();
-  const noteId = formData.get("noteId");
-  const content = formData.get("content");
-
-  if (!noteId || !content) return new Response("Missing Note ID or Content", { status: 400 });
-
-  const notes = await getNotesFromGitHub(userAgent);
-  notes[noteId] = content;
-  await saveNotesToGitHub(notes, userAgent);
-
-  return new Response("Note Saved", { status: 200 });
-}
-
-// Handle viewing a note
-async function handleNote(path, userAgent) {
-    try {
-        const noteId = path.substring(6); // Extract note ID from "/note/{noteId}"
-        const notes = await getNotesFromGitHub(userAgent);
-
-        if (!notes[noteId]) {
-            return new Response("Note Not Found", { status: 404 });
+export default {
+    async fetch(request) {
+        if (request.method !== "POST") {
+            return new Response("Method not allowed", { status: 405 });
         }
 
-        const noteContent = notes[noteId];
+        const { email, password } = await request.json();
+        if (!email || !password) {
+            return new Response("Missing fields", { status: 400 });
+        }
 
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head><title>Note: ${noteId}</title></head>
-            <body>
-                <h1>Note: ${noteId}</h1>
-                <pre>${noteContent}</pre>
-                <a href="/">Back to Notes</a>
-            </body>
-            </html>
-        `;
+        const githubToken = "YOUR_GITHUB_TOKEN";
+        const repo = "Hiplitehehe/Notes";
+        const filePath = "K.json";
+        const branch = "main"; // Change if needed
 
-        return new Response(html, { headers: { "Content-Type": "text/html" } });
-    } catch (error) {
-        console.error("Error in handleNote:", error);
-        return new Response("Internal Server Error", { status: 500 });
-    }
-}
+        const githubApiUrl = `https://api.github.com/repos/${repo}/contents/${filePath}`;
+        const headers = {
+            Authorization: `Bearer ${githubToken}`,
+            Accept: "application/vnd.github.v3+json",
+        };
+
+        // Fetch current K.json
+        let response = await fetch(githubApiUrl, { headers });
+        if (!response.ok) {
+            return new Response("Failed to fetch user data", { status: 500 });
+        }
+
+        let data = await response.json();
+        let content = JSON.parse(atob(data.content)); // Decode Base64
+        let sha = data.sha; // Needed for updating the file
+
+        // Check if email exists
+        if (content[email]) {
+            return new Response("Email already registered", { status: 400 });
+        }
+
+        // Add new user
+        content[email] = { password }; // Hashing should be done client-side or with a separate function
+
+        // Upload updated data
+        const updatedContent = {
+            message: "New user registered",
+            content: btoa(JSON.stringify(content, null, 2)),
+            sha,
+            branch,
+        };
+
+        response = await fetch(githubApiUrl, {
+            method: "PUT",
+            headers,
+            body: JSON.stringify(updatedContent),
+        });
+
+        if (!response.ok) {
+            return new Response("Failed to update user data", { status: 500 });
+        }
+
+        return new Response("User registered successfully", { status: 201 });
+    },
+};
