@@ -34,7 +34,7 @@ async function handleRequest(request) {
 
 // Serve static HTML file
 async function serveStaticFile(filename) {
-  return new Response(await fetch(`https://yourdomain.com/${filename}`).then(res => res.text()), {
+  return new Response(await fetch(`https://raw.githubusercontent.com/Hiplitehehe/redesigned-octo-telegram/refs/heads/main/${filename}`).then(res => res.text()), {
     headers: { "Content-Type": "text/html" }
   });
 }
