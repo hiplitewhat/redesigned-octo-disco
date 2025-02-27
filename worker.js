@@ -26,8 +26,8 @@ async function handleRequest(request) {
 
 async function handleIndex(isMobile, userAgent) {
   try {
-    const noteList = await listNotes(userAgent);
-    const noteLinks = noteList.map(note => `<li><a href="/note/${note.name}">${note.name}</a></li>`).join('');
+    const notes = await getNotesFromGitHub(userAgent);
+    const noteLinks = Object.keys(notes).map(noteId => `<li><a href="/note/${noteId}">${noteId}</a></li>`).join('');
 
     let html;
     if (isMobile) {
@@ -85,9 +85,10 @@ async function handleIndex(isMobile, userAgent) {
 
 async function handleNote(noteId, isMobile, userAgent) {
   try {
-    const noteContent = await getNote(noteId, userAgent);
+    const notes = await getNotesFromGitHub(userAgent);
+    const noteContent = notes[noteId];
 
-    if (noteContent === null) {
+    if (!noteContent) {
       return new Response('Note Not Found', { status: 404 });
     }
 
@@ -117,7 +118,9 @@ async function handleSave(request, userAgent) {
       return new Response('Missing Note ID or Content', { status: 400 });
     }
 
-    await saveNote(noteId, content, userAgent);
+    const notes = await getNotesFromGitHub(userAgent);
+    notes[noteId] = content;
+    await saveNotesToGitHub(notes, userAgent);
 
     return Response.redirect(`/note/${noteId}`, 302);
   } catch (error) {
@@ -131,31 +134,11 @@ async function handleSave(request, userAgent) {
 const GITHUB_TOKEN = 'YOUR_GITHUB_TOKEN';
 const GITHUB_OWNER = 'Hiplitehehe';
 const GITHUB_REPO = 'Notes';
-const GITHUB_PATH = '';
+const GITHUB_FILE = 'j.json'; // Single JSON file
 
-async function listNotes(userAgent) {
+async function getNotesFromGitHub(userAgent) {
   try {
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
-      headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
-        'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App',
-      },
-    });
-    const data = await response.json();
-    if (Array.isArray(data)) {
-      return data.filter(item => item.type === 'file').map(file => ({ name: file.name }));
-    } else {
-      return [];
-    }
-  } catch (error) {
-    console.error('Error listing notes:', error);
-    return [];
-  }
-}
-
-async function getNote(noteId, userAgent) {
-  try {
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}${noteId}`, {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
       headers: {
         Authorization: `token ${GITHUB_TOKEN}`,
         'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App',
@@ -163,32 +146,26 @@ async function getNote(noteId, userAgent) {
     });
     const data = await response.json();
     if (data && data.content) {
-      return atob(data.content);
+      return JSON.parse(atob(data.content));
     } else {
-      return null;
+      return {}; // Return empty object if file doesn't exist or is empty
     }
   } catch (error) {
-    console.error('Error getting note:', error);
-    return null;
+    console.error('Error getting notes:', error);
+    return {};
   }
 }
 
-async function saveNote(noteId, content, userAgent) {
+async function saveNotesToGitHub(notes, userAgent) {
   try {
-    const existingNote = await getNote(noteId, userAgent);
+    const existingFile = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {headers: {Authorization: `token ${GITHUB_TOKEN}`, 'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App'}});
     let sha = undefined;
-    if (existingNote) {
-      const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}${noteId}`, {
-        headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
-          'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App',
-        },
-      });
-      const data = await response.json();
+    if (existingFile.ok){
+      const data = await existingFile.json();
       sha = data.sha;
     }
 
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}${noteId}`, {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
       method: 'PUT',
       headers: {
         Authorization: `token ${GITHUB_TOKEN}`,
@@ -196,16 +173,16 @@ async function saveNote(noteId, content, userAgent) {
         'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App',
       },
       body: JSON.stringify({
-        message: `Update note: ${noteId}`,
-        content: btoa(content),
+        message: 'Update notes',
+        content: btoa(JSON.stringify(notes)),
         sha: sha,
       }),
     });
 
     if (!response.ok) {
-      console.error('Error saving note:', await response.text());
+      console.error('Error saving notes:', await response.text());
     }
   } catch (error) {
-    console.error('Error saving note:', error);
+    console.error('Error saving notes:', error);
   }
 }
