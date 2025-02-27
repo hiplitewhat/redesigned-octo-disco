@@ -149,15 +149,18 @@ async function handleSave(request, userAgent) {
 // **User Authentication**
 async function handleRegister(request, userAgent) {
   const formData = await request.formData();
-  const username = formData.get('username');
-  const password = formData.get('password');
+  const username = formData.get('username').trim();
+  const password = formData.get('password').trim();
 
   if (!username || !password) return new Response('Missing Data', { status: 400 });
 
   const users = await getUsersFromGitHub(userAgent);
+
   if (users[username]) return new Response('User Exists', { status: 409 });
 
-  users[username] = btoa(password);
+  // Store as hashed password (or at least a better encoding)
+  users[username] = btoa(unescape(encodeURIComponent(password)));
+
   await saveUsersToGitHub(users, userAgent);
 
   return new Response('Registration successful', { status: 200 });
@@ -165,14 +168,22 @@ async function handleRegister(request, userAgent) {
 
 async function handleLogin(request, userAgent) {
   const formData = await request.formData();
-  const username = formData.get('username');
-  const password = formData.get('password');
+  const username = formData.get('username').trim();
+  const password = formData.get('password').trim();
 
   if (!username || !password) return new Response('Missing Data', { status: 400 });
 
   const users = await getUsersFromGitHub(userAgent);
-  if (users[username] && users[username] === btoa(password)) {
-    return new Response('Login Successful', { headers: { 'Set-Cookie': setSessionCookie(username) } });
+
+  if (!users[username]) return new Response('User Not Found', { status: 404 });
+
+  // Decode stored password and compare
+  const storedPassword = decodeURIComponent(escape(atob(users[username])));
+
+  if (storedPassword === password) {
+    return new Response('Login Successful', {
+      headers: { 'Set-Cookie': setSessionCookie(username) }
+    });
   } else {
     return new Response('Unauthorized', { status: 401 });
   }
