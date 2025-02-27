@@ -8,15 +8,16 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Wrangler
         run: npm install -g wrangler
 
-      - name: Authenticate Wrangler
-        run: wrangler login
+      - name: Set Environment Variables
+        run: echo "GH_PAT=${{ secrets.GH_PAT }}" >> $GITHUB_TOKEN
 
       - name: Deploy Worker
-        run: wrangler publish
+        run: wrangler deploy --var GITHUB_TOKEN=${{ secrets.GH_PAT }}
