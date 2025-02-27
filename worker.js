@@ -11,9 +11,9 @@ async function handleRequest(request) {
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
 
   if (path === '/') {
-    return handleIndex(isMobile); // Pass isMobile to handleIndex
+    return handleIndex(isMobile);
   } else if (path.startsWith('/note/')) {
-    return handleNote(path.substring(6), isMobile); // Pass isMobile to handleNote
+    return handleNote(path.substring(6), isMobile);
   } else if (path === '/save' && request.method === 'POST') {
     return handleSave(request);
   } else {
@@ -22,12 +22,11 @@ async function handleRequest(request) {
 }
 
 async function handleIndex(isMobile) {
-  const noteList = await listNotes();
+  const noteList = await listNotes(); // Call listNotes here
   const noteLinks = noteList.map(note => `<li><a href="/note/${note.name}">${note.name}</a></li>`).join('');
 
   let html;
   if (isMobile) {
-    // Mobile-specific HTML (simplified form, smaller font, etc.)
     html = `
       <!DOCTYPE html>
       <html>
@@ -48,7 +47,6 @@ async function handleIndex(isMobile) {
       </html>
     `;
   } else {
-    // Desktop HTML (original form, larger text area, etc.)
     html = `
       <!DOCTYPE html>
       <html>
@@ -78,14 +76,14 @@ async function handleIndex(isMobile) {
 }
 
 async function handleNote(noteId, isMobile) {
-  const noteContent = await getNote(noteId);
+  const noteContent = await getNote(noteId); // Call getNote here
 
   if (noteContent === null) {
     return new Response('Note Not Found', { status: 404 });
   }
 
   let html;
-  if(isMobile){
+  if (isMobile) {
     html = `<!DOCTYPE html><html><head><title>Note: ${noteId}</title></head><body><h1>Note: ${noteId}</h1><pre style="font-size:12px;">${noteContent}</pre><a href="/">Back</a></body></html>`;
   } else {
     html = `<!DOCTYPE html><html><head><title>Note: ${noteId}</title></head><body><h1>Note: ${noteId}</h1><pre>${noteContent}</pre><a href="/">Back to List</a></body></html>`;
@@ -96,7 +94,19 @@ async function handleNote(noteId, isMobile) {
   });
 }
 
-// ... (rest of the handleSave, listNotes, getNote, saveNote functions remain the same)
+async function handleSave(request) {
+  const formData = await request.formData();
+  const noteId = formData.get('noteId');
+  const content = formData.get('content');
+
+  if (!noteId || !content) {
+    return new Response('Missing Note ID or Content', { status: 400 });
+  }
+
+  await saveNote(noteId, content);
+
+  return Response.redirect(`/note/${noteId}`, 302);
+}
 
 // GitHub Interaction (Replace with your GitHub credentials and repository details)
 
@@ -104,3 +114,72 @@ const GITHUB_TOKEN = 'YOUR_GITHUB_TOKEN';
 const GITHUB_OWNER = 'Hiplitehehe';
 const GITHUB_REPO = 'Notes';
 const GITHUB_PATH = '';
+
+async function listNotes() {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+      },
+    });
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      return data.filter(item => item.type === 'file').map(file => ({ name: file.name }));
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error listing notes:', error);
+    return [];
+  }
+}
+
+async function getNote(noteId) {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}${noteId}`, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+      },
+    });
+    const data = await response.json();
+    if (data && data.content) {
+      return atob(data.content);
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error('Error getting note:', error);
+    return null;
+  }
+}
+
+async function saveNote(noteId, content) {
+  try {
+    const existingNote = await getNote(noteId);
+    let sha = undefined;
+    if (existingNote) {
+      const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}${noteId}`, { headers: { Authorization: `token ${GITHUB_TOKEN}` } });
+      const data = await response.json();
+      sha = data.sha;
+    }
+
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}${noteId}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `Update note: ${noteId}`,
+        content: btoa(content),
+        sha: sha,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Error saving note:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error saving note:', error);
+  }
+}
