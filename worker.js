@@ -8,30 +8,20 @@ addEventListener("fetch", (event) => {
 });
 
 async function handleIndex(request, userAgent) {
-    try {
-        const notes = await getNotesFromGitHub(userAgent);
-        
-        // Generate note links only (without content)
-        const noteLinks = Object.keys(notes)
-            .map(noteId => `<li><a href="/note/${noteId}">${noteId}</a></li>`)
-            .join('');
+  try {
+    const notes = await getNotesFromGitHub(userAgent);
+    const noteLinks = Object.keys(notes)
+      .map(noteId => `<li><a href="/note/${noteId}">${noteId}</a></li>`)
+      .join('');
 
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head><title>Notes</title></head>
-            <body>
-                <h1>All Notes</h1>
-                <ul>${noteLinks}</ul>
-            </body>
-            </html>
-        `;
+    let html = await fetchHtmlFile('index.html');
+    html = html.replace("{{NOTE_LINKS}}", noteLinks);
 
-        return new Response(html, { headers: { "Content-Type": "text/html" } });
-    } catch (error) {
-        console.error("Error in handleIndex:", error);
-        return new Response("Internal Server Error", { status: 500 });
-    }
+    return new Response(html, { headers: { "Content-Type": "text/html" } });
+  } catch (error) {
+    console.error("Error in handleIndex:", error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
 }
 
 async function handleRequest(request) {
