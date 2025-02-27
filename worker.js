@@ -93,8 +93,8 @@ async function handleSave(request) {
 // GitHub Interaction (Replace with your GitHub credentials and repository details)
 
 const GITHUB_TOKEN = 'YOUR_GITHUB_TOKEN'; // Replace with your personal access token
-const GITHUB_OWNER = 'YOUR_GITHUB_OWNER'; // Replace with your GitHub username or organization
-const GITHUB_REPO = 'YOUR_GITHUB_REPO'; // Replace with your repository name
+const GITHUB_OWNER = 'Hiplitehehe'; // Replace with your GitHub username or organization
+const GITHUB_REPO = 'Note'; // Replace with your repository name
 const GITHUB_PATH = 'notes/'; // Path within your repository to store notes
 
 async function listNotes() {
