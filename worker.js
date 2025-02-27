@@ -179,8 +179,28 @@ async function saveNotesToGitHub(notes, userAgent) {
 }
 
 async function getUsersFromGitHub(userAgent) {
-  return await fetchGitHubFile(USERS_FILE, userAgent);
+  try {
+    console.log('Fetching users.json from GitHub...');
+    
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/users.json`, {
+      headers: { Authorization: `token ${GITHUB_TOKEN}`, 'User-Agent': userAgent || 'Cloudflare-Worker-Notes-App' },
+    });
+
+    const data = await response.json();
+    console.log('GitHub API Response:', data);
+
+    if (!data || !data.content) {
+      console.log('users.json not found or empty.');
+      return {};
+    }
+
+    return JSON.parse(atob(data.content)); // Decode base64 JSON
+  } catch (error) {
+    console.error('Error fetching users.json:', error);
+    return {};
+  }
 }
+
 
 async function saveUsersToGitHub(users, userAgent) {
   await saveGitHubFile(USERS_FILE, users, userAgent);
