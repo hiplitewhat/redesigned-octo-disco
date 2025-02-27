@@ -2,6 +2,37 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request));
 });
 
+async function handleSave(request, userAgent) {
+  try {
+    const cookieHeader = request.headers.get("Cookie") || "";
+    const sessionUser = getSessionUser(cookieHeader);
+
+    if (!sessionUser) {
+      return new Response("Unauthorized: Please log in to save notes.", { status: 401 });
+    }
+
+    const formData = await request.formData();
+    const noteId = formData.get("noteId");
+    const content = formData.get("content");
+
+    if (!noteId || !content) {
+      return new Response("Missing Note ID or Content", { status: 400 });
+    }
+
+    // Fetch existing notes from j.json
+    const notes = await getNotesFromGitHub(userAgent);
+    notes[noteId] = content; // Save new note
+
+    // Save updated notes back to GitHub
+    await saveNotesToGitHub(notes, userAgent);
+
+    return Response.redirect(`/note/${noteId}`, 302);
+  } catch (error) {
+    console.error("Error in handleSave:", error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+}
+
 function getSessionUser(cookieHeader) {
   const cookies = Object.fromEntries(cookieHeader.split("; ").map(c => c.split("=")));
   return cookies.sessionUser || null; // Return username if logged in
