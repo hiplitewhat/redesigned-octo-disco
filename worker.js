@@ -7,6 +7,33 @@ addEventListener("fetch", (event) => {
   event.respondWith(handleRequest(event.request));
 });
 
+async function handleIndex(request, userAgent) {
+    try {
+        const notes = await getNotesFromGitHub(userAgent);
+        
+        // Generate note links only (without content)
+        const noteLinks = Object.keys(notes)
+            .map(noteId => `<li><a href="/note/${noteId}">${noteId}</a></li>`)
+            .join('');
+
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head><title>Notes</title></head>
+            <body>
+                <h1>All Notes</h1>
+                <ul>${noteLinks}</ul>
+            </body>
+            </html>
+        `;
+
+        return new Response(html, { headers: { "Content-Type": "text/html" } });
+    } catch (error) {
+        console.error("Error in handleIndex:", error);
+        return new Response("Internal Server Error", { status: 500 });
+    }
+}
+
 async function handleRequest(request) {
   const url = new URL(request.url);
   const path = url.pathname;
