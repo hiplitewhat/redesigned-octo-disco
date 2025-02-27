@@ -2,6 +2,19 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request));
 });
 
+function getSessionUser(cookieHeader) {
+  const cookies = Object.fromEntries(cookieHeader.split("; ").map(c => c.split("=")));
+  return cookies.sessionUser || null; // Return username if logged in
+}
+
+function setSessionCookie(username) {
+  return `sessionUser=${username}; Path=/; HttpOnly`;
+}
+
+function clearSessionCookie() {
+  return `sessionUser=; Path=/; HttpOnly; Max-Age=0`;
+}
+
 async function handleNote(path, request, userAgent) {
   try {
     const noteId = path.substring(6); // Extract note ID from "/note/{noteId}"
