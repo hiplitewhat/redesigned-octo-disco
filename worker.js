@@ -27,7 +27,7 @@ async function getGitHubToken(clientId, clientSecret, code) {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json' // Ensure JSON response
         },
         body: JSON.stringify({
             client_id: clientId,
@@ -36,7 +36,14 @@ async function getGitHubToken(clientId, clientSecret, code) {
         })
     });
 
-    return await response.json();
+    const text = await response.text(); // Read raw response  
+    console.log("GitHub Token Response:", text); // Debug output  
+
+    try {
+        return JSON.parse(text); // Try to parse JSON
+    } catch (e) {
+        throw new Error(`Failed to parse GitHub response: ${text}`);
+    }
 }
 
 async function getGitHubUser(accessToken) {
