@@ -14,15 +14,23 @@ export default {
       if (!code) return new Response("Missing code", { status: 400 });
 
       const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({
-          client_id: env.GITHUB_CLIENT_ID,
-          client_secret: env.GITHUB_CLIENT_SECRET,
-          code,
-          redirect_uri: env.REDIRECT_URI,
-        }),
-      });
+    method: "POST",
+    headers: { 
+        "Content-Type": "application/json",
+        "Accept": "application/json"  // Ensure GitHub returns JSON
+    },
+    body: JSON.stringify({
+        client_id: env.GITHUB_CLIENT_ID,
+        client_secret: env.GITHUB_CLIENT_SECRET,
+        code,
+        redirect_uri: env.REDIRECT_URI,
+    }),
+});
+
+const tokenText = await tokenResponse.text();  // Get raw response
+return new Response(`<pre>${tokenText}</pre>`, {
+    headers: { "Content-Type": "text/html" }
+});
 
       const tokenData = await tokenResponse.json();
       if (!tokenData.access_token) {
