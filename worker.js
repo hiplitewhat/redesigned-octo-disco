@@ -1,50 +1,62 @@
 export default {
     async fetch(request, env) {
-        try {
-            const url = new URL(request.url);
+        const url = new URL(request.url);
 
-            if (request.method === "OPTIONS") {
-                return handleOptions(request);
-            }
-
-            if (request.method === "POST") {
-                if (url.pathname === "/register") {
-                    return await handleRegister(request, env);
-                } else if (url.pathname === "/login") {
-                    return await handleLogin(request, env);
-                }
-            }
-
-            return new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: corsHeaders(request) });
-        } catch (error) {
-            return handleError(error, request);
+        if (request.method === "OPTIONS") {
+            return handleOptions();
         }
+
+        if (request.method === "POST") {
+            if (url.pathname === "/register") {
+                return await handleRegister(request, env);
+            } else if (url.pathname === "/login") {
+                return await handleLogin(request, env);
+            }
+        }
+
+        return new Response("Not Found", { status: 404 });
     }
 };
 
 // Handle CORS preflight requests
-function handleOptions(request) {
-    return new Response(null, { status: 204, headers: corsHeaders(request) });
+function handleOptions() {
+    return new Response(null, {
+        status: 204,
+        headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type"
+        }
+    });
+}
+
+// SHA-256 Password Hashing
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+// Verify Hashed Password
+async function verifyPassword(inputPassword, storedHash) {
+    const hashedInput = await hashPassword(inputPassword);
+    return hashedInput === storedHash;
 }
 
 // User Registration
 async function handleRegister(request, env) {
     try {
         const { username, password } = await request.json();
+        if (!username || !password) throw new Error("Missing username or password");
 
-        if (!username || !password) {
-            throw new Error("Missing username or password");
-        }
-
-        // Fetch existing users from GitHub
         const githubUrl = "https://raw.githubusercontent.com/Hiplitehehe/Notes/main/K.json";
         const response = await fetch(githubUrl);
+        let users = response.ok ? await response.json() : [];
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
-        }
-
-        const users = await response.json();
+        if (!Array.isArray(users)) throw new Error("User data is not an array.");
 
         if (users.some(user => user.username === username)) {
             return new Response(JSON.stringify({ error: "Username already exists" }), {
@@ -53,7 +65,7 @@ async function handleRegister(request, env) {
             });
         }
 
-        // Hash password
+        // Hash password before storing
         const hashedPassword = await hashPassword(password);
         users.push({ username, password: hashedPassword });
 
@@ -76,31 +88,15 @@ async function handleRegister(request, env) {
 async function handleLogin(request, env) {
     try {
         const { username, password } = await request.json();
+        if (!username || !password) throw new Error("Missing username or password");
 
-        if (!username || !password) {
-            throw new Error("Missing username or password");
-        }
-
-        // Fetch users from GitHub
         const githubUrl = "https://raw.githubusercontent.com/Hiplitehehe/Notes/main/K.json";
         const response = await fetch(githubUrl);
+        if (!response.ok) throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
-        }
+        let users = await response.json();
+        if (!Array.isArray(users)) throw new Error("User data is not an array.");
 
-        let users;
-        try {
-            users = await response.json();
-        } catch (err) {
-            users = [];
-        }
-
-        if (!Array.isArray(users)) {
-            throw new Error("User data is not an array. Check K.json format.");
-        }
-
-        // Find user by username
         const user = users.find(u => u.username === username);
         if (!user) {
             return new Response(JSON.stringify({ error: "User does not exist" }), {
@@ -109,7 +105,6 @@ async function handleLogin(request, env) {
             });
         }
 
-        // Verify password (if stored as a hash)
         if (!(await verifyPassword(password, user.password))) {
             return new Response(JSON.stringify({ error: "Invalid password" }), {
                 status: 401,
@@ -117,7 +112,6 @@ async function handleLogin(request, env) {
             });
         }
 
-        // Generate a basic token (you should replace this with a proper authentication method)
         const token = btoa(`${username}:${Date.now()}`);
 
         return new Response(JSON.stringify({ message: "Login successful", token }), {
@@ -129,20 +123,6 @@ async function handleLogin(request, env) {
     }
 }
 
-// Password Hashing
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    return btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
-}
-
-// Verify Password
-async function verifyPassword(password, hashedPassword) {
-    const hashedAttempt = await hashPassword(password);
-    return hashedAttempt === hashedPassword;
-}
-
 // Update GitHub File
 async function updateGitHubFile(updatedData, env) {
     const githubRepo = "Hiplitehehe/Notes";
@@ -151,33 +131,24 @@ async function updateGitHubFile(updatedData, env) {
 
     const getFileUrl = `https://api.github.com/repos/${githubRepo}/contents/${filePath}`;
 
-    // Fetch current file metadata
     const fileResponse = await fetch(getFileUrl, {
-        headers: {
-            Authorization: `token ${githubToken}`,
-            "User-Agent": "Cloudflare-Worker-User",
-            Accept: "application/vnd.github.v3+json"
-        }
+        headers: { Authorization: `token ${githubToken}` }
     });
 
     if (!fileResponse.ok) {
-        throw new Error(`GitHub API error (fetching file): ${fileResponse.status} ${fileResponse.statusText}`);
+        return fileResponse; // Return GitHub API error response
     }
 
     const fileData = await fileResponse.json();
     const sha = fileData.sha;
 
-    // Encode new data as Base64
     const updatedContent = btoa(JSON.stringify(updatedData, null, 2));
 
-    // Send update request
-    const updateResponse = await fetch(getFileUrl, {
+    return fetch(getFileUrl, {
         method: "PUT",
         headers: {
             Authorization: `token ${githubToken}`,
-            "User-Agent": "Cloudflare-Worker-User",
-            "Content-Type": "application/json",
-            Accept: "application/vnd.github.v3+json"
+            "Content-Type": "application/json"
         },
         body: JSON.stringify({
             message: "Update user data",
@@ -185,31 +156,22 @@ async function updateGitHubFile(updatedData, env) {
             sha
         })
     });
-
-    if (!updateResponse.ok) {
-        throw new Error(`GitHub API error (updating file): ${updateResponse.status} ${updateResponse.statusText}`);
-    }
-
-    return updateResponse;
 }
 
-// Handle Errors
+// CORS Headers
+function corsHeaders(request) {
+    return {
+        "Access-Control-Allow-Origin": request.headers.get("Origin") || "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Content-Type": "application/json"
+    };
+}
+
+// Error Handling
 function handleError(error, request) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || "Something went wrong" }), {
         status: 500,
         headers: corsHeaders(request)
     });
-}
-
-// Dynamic CORS Headers
-function corsHeaders(request) {
-    const allowedOrigin = "https://hiplitehehe.github.io";
-
-    return {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json"
-    };
 }
