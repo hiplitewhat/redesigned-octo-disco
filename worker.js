@@ -61,7 +61,7 @@ async function handleCallback(request, env) {
     return new Response(null, {
         status: 302,
         headers: {
-            "Location": `https://hiplitehehe.github.io/index.html?token=${tokenData.access_token}`
+            "Location": `https://hiplitehehe.github.io/bookish-octo-robot/index.html?token=${tokenData.access_token}`
         }
     });
 }
