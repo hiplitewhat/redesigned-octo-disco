@@ -1,71 +1,63 @@
-export default {
-    async fetch(request) {
-        if (request.method === "OPTIONS") {
-            return new Response(null, {
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "POST, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type",
-                },
-            });
-        }
+addEventListener("fetch", (event) => {
+  event.respondWith(handleRequest(event.request));
+});
 
-        if (request.method !== "POST") {
-            return new Response("Method not allowed", { status: 405 });
-        }
+async function handleRequest(request) {
+  // Handle preflight requests (CORS)
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      headers: corsHeaders(),
+    });
+  }
 
-        const url = new URL(request.url);
-        if (url.pathname === "/login") {
-            return handleLogin(request);
-        } else {
-            return new Response("Not found", { status: 404 });
-        }
-    },
-};
-
-async function handleLogin(request) {
-    try {
-        const { email, password } = await request.json();
-        if (!email || !password) {
-            return new Response("Missing fields", { status: 400, headers: { "Access-Control-Allow-Origin": "*" } });
-        }
-
-        const githubToken = "YOUR_GITHUB_TOKEN";
-        const repo = "YOUR_USERNAME/YOUR_REPO";
-        const filePath = "K.json";
-
-        const githubApiUrl = `https://api.github.com/repos/${repo}/contents/${filePath}`;
-        const headers = {
-            Authorization: `Bearer ${githubToken}`,
-            Accept: "application/vnd.github.v3+json",
-            "User-Agent": "Cloudflare-Worker/1.0"
-        };
-
-        let response = await fetch(githubApiUrl, { headers });
-        if (!response.ok) {
-            const errorText = await response.text();
-            return new Response("GitHub Fetch Error: " + errorText, { 
-                status: response.status, 
-                headers: { "Access-Control-Allow-Origin": "*" } 
-            });
-        }
-
-        let data = await response.json();
-        let content = JSON.parse(atob(data.content)); // Decode Base64
-
-        if (!content[email] || content[email].password !== password) {
-            return new Response("Invalid email or password", { status: 401, headers: { "Access-Control-Allow-Origin": "*" } });
-        }
-
-        return new Response("Login successful", {
-            status: 200,
-            headers: { "Access-Control-Allow-Origin": "*" },
-        });
-
-    } catch (error) {
-        return new Response("Server error: " + error.message, { 
-            status: 500, 
-            headers: { "Access-Control-Allow-Origin": "*" } 
-        });
+  try {
+    // Read request body if it's a POST request
+    let requestBody = {};
+    if (request.method === "POST") {
+      requestBody = await request.json();
     }
+
+    // Handle registration logic
+    if (request.url.includes("/register") && request.method === "POST") {
+      return await handleRegister(requestBody);
     }
+
+    // If the request doesn't match any known endpoints
+    return new Response(JSON.stringify({ error: "Invalid request" }), {
+      status: 400,
+      headers: corsHeaders(),
+    });
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: corsHeaders(),
+    });
+  }
+}
+
+// Function to handle user registration
+async function handleRegister(data) {
+  if (!data.username || !data.password) {
+    return new Response(JSON.stringify({ error: "Missing username or password" }), {
+      status: 400,
+      headers: corsHeaders(),
+    });
+  }
+
+  // Simulate saving user (you can replace this with actual GitHub API storage)
+  return new Response(JSON.stringify({ success: true, message: "User registered successfully!" }), {
+    status: 201,
+    headers: corsHeaders(),
+  });
+}
+
+// CORS Headers function
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Content-Type": "application/json",
+  };
+}
