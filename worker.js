@@ -91,6 +91,12 @@ async function handleLogin(request, env) {
 
         const users = await response.json();
 
+        // Ensure users is an array
+        if (!Array.isArray(users)) {
+            throw new Error("User data is not an array. Check K.json format.");
+        }
+
+        // Find user
         const user = users.find(u => u.username === username);
         if (!user) {
             return new Response(JSON.stringify({ error: "Invalid username or password" }), {
@@ -99,6 +105,7 @@ async function handleLogin(request, env) {
             });
         }
 
+        // Verify password
         if (!(await verifyPassword(password, user.password))) {
             return new Response(JSON.stringify({ error: "Invalid username or password" }), {
                 status: 401,
@@ -106,6 +113,7 @@ async function handleLogin(request, env) {
             });
         }
 
+        // Generate a basic token
         const token = btoa(`${username}:${Date.now()}`);
 
         return new Response(JSON.stringify({ message: "Login successful", token }), {
