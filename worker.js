@@ -27,7 +27,7 @@ function handleAuth(env) {
     });
 }
 
-// 2️⃣ Handle GitHub OAuth Callback
+// 2️⃣ Handle GitHub OAuth Callback and Redirect Back
 async function handleCallback(request, env) {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
@@ -57,13 +57,16 @@ async function handleCallback(request, env) {
         });
     }
 
-    return new Response(JSON.stringify({ message: "Login successful", token: tokenData.access_token }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
+    // ✅ Redirect back to your site with the token in the URL
+    return new Response(null, {
+        status: 302,
+        headers: {
+            "Location": `https://hiplitehehe.github.io/index.html?token=${tokenData.access_token}`
+        }
     });
 }
 
-// 3️⃣ Fetch User Data from GitHub
+// 3️⃣ Fetch GitHub User Data
 async function getUserData(request, env) {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader) {
