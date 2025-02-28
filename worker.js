@@ -1,29 +1,30 @@
 export default {
     async fetch(request, env) {
-        const url = new URL(request.url);
+        try {
+            const url = new URL(request.url);
 
-        if (request.method === "OPTIONS") {
-            return handleOptions(request);
-        }
-
-        if (request.method === "POST") {
-            if (url.pathname === "/register") {
-                return await handleRegister(request, env);
-            } else if (url.pathname === "/login") {
-                return await handleLogin(request, env);
+            if (request.method === "OPTIONS") {
+                return handleOptions(request);
             }
-        }
 
-        return new Response("Not Found", { status: 404 });
+            if (request.method === "POST") {
+                if (url.pathname === "/register") {
+                    return await handleRegister(request, env);
+                } else if (url.pathname === "/login") {
+                    return await handleLogin(request, env);
+                }
+            }
+
+            return new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: corsHeaders(request) });
+        } catch (error) {
+            return handleError(error, request);
+        }
     }
 };
 
 // Handle CORS preflight requests
 function handleOptions(request) {
-    return new Response(null, {
-        status: 204,
-        headers: corsHeaders(request)
-    });
+    return new Response(null, { status: 204, headers: corsHeaders(request) });
 }
 
 // User Registration
@@ -31,12 +32,20 @@ async function handleRegister(request, env) {
     try {
         const { username, password } = await request.json();
 
+        if (!username || !password) {
+            throw new Error("Missing username or password");
+        }
+
         // Fetch existing users from GitHub
         const githubUrl = "https://raw.githubusercontent.com/Hiplitehehe/Notes/main/K.json";
         const response = await fetch(githubUrl);
-        const users = response.ok ? await response.json() : [];
 
-        // Check if user already exists
+        if (!response.ok) {
+            throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+        }
+
+        const users = await response.json();
+
         if (users.some(user => user.username === username)) {
             return new Response(JSON.stringify({ error: "Username already exists" }), {
                 status: 400,
@@ -44,14 +53,14 @@ async function handleRegister(request, env) {
             });
         }
 
-        // Hash password before storing
+        // Hash password
         const hashedPassword = await hashPassword(password);
         users.push({ username, password: hashedPassword });
 
         // Update GitHub file
         const updateResponse = await updateGitHubFile(users, env);
         if (!updateResponse.ok) {
-            throw new Error("Failed to update user database");
+            throw new Error(`Failed to update user database: ${updateResponse.status} ${updateResponse.statusText}`);
         }
 
         return new Response(JSON.stringify({ message: "User registered successfully" }), {
@@ -59,10 +68,7 @@ async function handleRegister(request, env) {
             headers: corsHeaders(request)
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: "Registration failed" }), {
-            status: 500,
-            headers: corsHeaders(request)
-        });
+        return handleError(error, request);
     }
 }
 
@@ -71,23 +77,35 @@ async function handleLogin(request, env) {
     try {
         const { username, password } = await request.json();
 
+        if (!username || !password) {
+            throw new Error("Missing username or password");
+        }
+
         // Fetch users from GitHub
         const githubUrl = "https://raw.githubusercontent.com/Hiplitehehe/Notes/main/K.json";
         const response = await fetch(githubUrl);
-        if (!response.ok) throw new Error("Failed to fetch user data");
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+        }
 
         const users = await response.json();
 
-        // Find user
         const user = users.find(u => u.username === username);
-        if (!user || !(await verifyPassword(password, user.password))) {
-            return new Response(JSON.stringify({ error: "Invalid credentials" }), {
+        if (!user) {
+            return new Response(JSON.stringify({ error: "Invalid username or password" }), {
                 status: 401,
                 headers: corsHeaders(request)
             });
         }
 
-        // Generate a basic token (consider using JWT in production)
+        if (!(await verifyPassword(password, user.password))) {
+            return new Response(JSON.stringify({ error: "Invalid username or password" }), {
+                status: 401,
+                headers: corsHeaders(request)
+            });
+        }
+
         const token = btoa(`${username}:${Date.now()}`);
 
         return new Response(JSON.stringify({ message: "Login successful", token }), {
@@ -95,14 +113,11 @@ async function handleLogin(request, env) {
             headers: corsHeaders(request)
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: "Login failed" }), {
-            status: 500,
-            headers: corsHeaders(request)
-        });
+        return handleError(error, request);
     }
 }
 
-// Secure password hashing using Web Crypto API
+// Password Hashing
 async function hashPassword(password) {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -110,7 +125,7 @@ async function hashPassword(password) {
     return btoa(String.fromCharCode(...new Uint8Array(hashBuffer)));
 }
 
-// Verify hashed password
+// Verify Password
 async function verifyPassword(password, hashedPassword) {
     const hashedAttempt = await hashPassword(password);
     return hashedAttempt === hashedPassword;
@@ -120,20 +135,23 @@ async function verifyPassword(password, hashedPassword) {
 async function updateGitHubFile(updatedData, env) {
     const githubRepo = "Hiplitehehe/Notes";
     const filePath = "K.json";
-    const githubToken = env.GITHUB_TOKEN; // Use secret from Cloudflare environment
+    const githubToken = env.GITHUB_TOKEN;
 
     const getFileUrl = `https://api.github.com/repos/${githubRepo}/contents/${filePath}`;
 
-    // Fetch current file metadata (SHA required for updating)
+    // Fetch current file metadata
     const fileResponse = await fetch(getFileUrl, {
-        headers: { 
+        headers: {
             Authorization: `token ${githubToken}`,
             "User-Agent": "Cloudflare-Worker-User",
             Accept: "application/vnd.github.v3+json"
         }
     });
-    if (!fileResponse.ok) throw new Error("Failed to fetch file metadata");
-    
+
+    if (!fileResponse.ok) {
+        throw new Error(`GitHub API error (fetching file): ${fileResponse.status} ${fileResponse.statusText}`);
+    }
+
     const fileData = await fileResponse.json();
     const sha = fileData.sha;
 
@@ -141,7 +159,7 @@ async function updateGitHubFile(updatedData, env) {
     const updatedContent = btoa(JSON.stringify(updatedData, null, 2));
 
     // Send update request
-    return fetch(getFileUrl, {
+    const updateResponse = await fetch(getFileUrl, {
         method: "PUT",
         headers: {
             Authorization: `token ${githubToken}`,
@@ -155,11 +173,25 @@ async function updateGitHubFile(updatedData, env) {
             sha
         })
     });
+
+    if (!updateResponse.ok) {
+        throw new Error(`GitHub API error (updating file): ${updateResponse.status} ${updateResponse.statusText}`);
+    }
+
+    return updateResponse;
 }
 
-// Dynamic CORS Headers for Credentialed Requests
+// Handle Errors
+function handleError(error, request) {
+    return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: corsHeaders(request)
+    });
+}
+
+// Dynamic CORS Headers
 function corsHeaders(request) {
-    const allowedOrigin = "https://hiplitehehe.github.io"; // Set your frontend URL
+    const allowedOrigin = "https://hiplitehehe.github.io";
 
     return {
         "Access-Control-Allow-Origin": allowedOrigin,
