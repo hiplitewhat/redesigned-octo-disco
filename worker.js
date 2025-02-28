@@ -1,7 +1,7 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    
+
     if (url.pathname === "/login") {
       return Response.redirect(
         `https://github.com/login/oauth/authorize?client_id=${env.GITHUB_CLIENT_ID}&redirect_uri=${env.REDIRECT_URI}`,
@@ -29,7 +29,21 @@ export default {
         return new Response("Failed to get access token", { status: 500 });
       }
 
-      return new Response(`GitHub OAuth successful! Token: ${tokenData.access_token}`);
+      // Fetch user details from GitHub
+      const userResponse = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+
+      const userData = await userResponse.json();
+      if (!userData.login) {
+        return new Response("Failed to get user data", { status: 500 });
+      }
+
+      // Redirect back to frontend with user info
+      return Response.redirect(
+        `https://hiplitehehe.github.io/bookish-octo-robot/index.html?username=${encodeURIComponent(userData.login)}`,
+        302
+      );
     }
 
     return new Response("Not Found", { status: 404 });
