@@ -2,7 +2,7 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
-        if (url.pathname === "/callback) {
+        if (url.pathname === "/callback") {
             return await handleGitHubLogin(request, env);
         }
 
