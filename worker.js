@@ -27,6 +27,47 @@ export default {
     }),
 });
 
+      async function handleCallback(request) {
+    const url = new URL(request.url);
+    const code = url.searchParams.get("code");
+
+    if (!code) {
+        return new Response("Error: Missing GitHub code", { status: 400 });
+    }
+
+    try {
+        const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({
+                client_id: GITHUB_CLIENT_ID,
+                client_secret: GITHUB_CLIENT_SECRET,
+                code: code
+            })
+        });
+
+        const data = await tokenResponse.json();
+
+        if (!data.access_token) {
+            return new Response(`Error: ${JSON.stringify(data)}`, { status: 400 });
+        }
+
+        // Redirect back to the frontend with the token
+        return new Response(null, {
+            status: 302,
+            headers: {
+                "Location": `https://hiplitehehe.github.io/bookish-octo-robot/index.html?token=${data.access_token}`
+            }
+        });
+
+    } catch (error) {
+        return new Response(`Error: ${error.message}`, { status: 500 });
+    }
+}
+      
 const tokenText = await tokenResponse.text();  // Get raw response
 return new Response(`<pre>${tokenText}</pre>`, {
     headers: { "Content-Type": "text/html" }
