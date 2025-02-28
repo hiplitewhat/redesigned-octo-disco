@@ -2,34 +2,47 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
-        if (url.pathname === "/github-auth" && request.method === "POST") {
-            return await handleGitHubAuth(request, env);
+        if (url.pathname === "/callback") {
+            const code = url.searchParams.get("code");
+            if (!code) return new Response("No code provided", { status: 400 });
+
+            const tokenData = await getGitHubToken(env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET, code);
+            if (!tokenData.access_token) return new Response("OAuth failed", { status: 401 });
+
+            const userData = await getGitHubUser(tokenData.access_token);
+            if (!userData.login) return new Response("Failed to fetch user data", { status: 500 });
+
+            return new Response(`<script>
+                localStorage.setItem("username", "${userData.login}");
+                window.location.href = "index.html";
+            </script>`, { headers: { "Content-Type": "text/html" } });
         }
 
         return new Response("Not Found", { status: 404 });
     }
 };
 
-// GitHub OAuth Authentication
-async function handleGitHubAuth(request, env) {
-    try {
-        const { code } = await request.json();
-        const client_id = env.GITHUB_CLIENT_ID;
-        const client_secret = env.GITHUB_CLIENT_SECRET;
+async function getGitHubToken(clientId, clientSecret, code) {
+    const response = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            client_id: clientId,
+            client_secret: clientSecret,
+            code: code
+        })
+    });
 
-        const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify({ client_id, client_secret, code }),
-        });
+    return await response.json();
+}
 
-        const tokenData = await tokenResponse.json();
-        if (tokenData.error) {
-            return new Response(JSON.stringify({ error: tokenData.error_description }), { status: 400 });
-        }
+async function getGitHubUser(accessToken) {
+    const response = await fetch('https://api.github.com/user', {
+        headers: { 'Authorization': `token ${accessToken}` }
+    });
 
-        return new Response(JSON.stringify({ access_token: tokenData.access_token }), { status: 200 });
-    } catch (error) {
-        return new Response(JSON.stringify({ error: "GitHub auth failed" }), { status: 500 });
-    }
+    return await response.json();
 }
