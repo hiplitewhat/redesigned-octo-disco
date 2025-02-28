@@ -3,7 +3,7 @@ export default {
         const url = new URL(request.url);
 
         if (request.method === "OPTIONS") {
-            return handleOptions();
+            return handleOptions(request);
         }
 
         if (request.method === "POST") {
@@ -19,10 +19,10 @@ export default {
 };
 
 // Handle CORS preflight requests
-function handleOptions() {
+function handleOptions(request) {
     return new Response(null, {
         status: 204,
-        headers: corsHeaders()
+        headers: corsHeaders(request)
     });
 }
 
@@ -40,7 +40,7 @@ async function handleRegister(request, env) {
         if (users.some(user => user.username === username)) {
             return new Response(JSON.stringify({ error: "Username already exists" }), {
                 status: 400,
-                headers: corsHeaders()
+                headers: corsHeaders(request)
             });
         }
 
@@ -56,12 +56,12 @@ async function handleRegister(request, env) {
 
         return new Response(JSON.stringify({ message: "User registered successfully" }), {
             status: 201,
-            headers: corsHeaders()
+            headers: corsHeaders(request)
         });
     } catch (error) {
         return new Response(JSON.stringify({ error: "Registration failed" }), {
             status: 500,
-            headers: corsHeaders()
+            headers: corsHeaders(request)
         });
     }
 }
@@ -83,7 +83,7 @@ async function handleLogin(request, env) {
         if (!user || !(await verifyPassword(password, user.password))) {
             return new Response(JSON.stringify({ error: "Invalid credentials" }), {
                 status: 401,
-                headers: corsHeaders()
+                headers: corsHeaders(request)
             });
         }
 
@@ -92,12 +92,12 @@ async function handleLogin(request, env) {
 
         return new Response(JSON.stringify({ message: "Login successful", token }), {
             status: 200,
-            headers: corsHeaders()
+            headers: corsHeaders(request)
         });
     } catch (error) {
         return new Response(JSON.stringify({ error: "Login failed" }), {
             status: 500,
-            headers: corsHeaders()
+            headers: corsHeaders(request)
         });
     }
 }
@@ -157,12 +157,15 @@ async function updateGitHubFile(updatedData, env) {
     });
 }
 
-// CORS Headers
-function corsHeaders() {
+// Dynamic CORS Headers for Credentialed Requests
+function corsHeaders(request) {
+    const allowedOrigin = "https://hiplitehehe.github.io"; // Set your frontend URL
+
     return {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Credentials": "true",
         "Content-Type": "application/json"
     };
 }
