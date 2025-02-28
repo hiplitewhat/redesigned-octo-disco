@@ -89,31 +89,35 @@ async function handleLogin(request, env) {
             throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
         }
 
-        const users = await response.json();
+        let users;
+        try {
+            users = await response.json();
+        } catch (err) {
+            users = [];
+        }
 
-        // Ensure users is an array
         if (!Array.isArray(users)) {
             throw new Error("User data is not an array. Check K.json format.");
         }
 
-        // Find user
+        // Find user by username
         const user = users.find(u => u.username === username);
         if (!user) {
-            return new Response(JSON.stringify({ error: "Invalid username or password" }), {
+            return new Response(JSON.stringify({ error: "User does not exist" }), {
                 status: 401,
                 headers: corsHeaders(request)
             });
         }
 
-        // Verify password
+        // Verify password (if stored as a hash)
         if (!(await verifyPassword(password, user.password))) {
-            return new Response(JSON.stringify({ error: "Invalid username or password" }), {
+            return new Response(JSON.stringify({ error: "Invalid password" }), {
                 status: 401,
                 headers: corsHeaders(request)
             });
         }
 
-        // Generate a basic token
+        // Generate a basic token (you should replace this with a proper authentication method)
         const token = btoa(`${username}:${Date.now()}`);
 
         return new Response(JSON.stringify({ message: "Login successful", token }), {
