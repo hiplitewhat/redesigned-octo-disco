@@ -33,7 +33,8 @@ export default {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          "Accept": "application/json",
+          "User-Agent": "HipliteBot/1.0", // Custom User-Agent
         },
         body: JSON.stringify({
           client_id: env.GITHUB_CLIENT_ID,
@@ -67,7 +68,10 @@ export default {
 
       // Verify GitHub user
       const userResponse = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "User-Agent": "HipliteBot/1.0", // Custom User-Agent
+        },
       });
 
       const userData = await userResponse.json();
@@ -82,13 +86,17 @@ export default {
       if (!body.title) return new Response("Missing note title", { status: 400, headers: corsHeaders });
 
       // Fetch current notes
-      const repo = "Hiplitehehe/Notes"; // Replace with your repo
+      const repo = "hiplitehehe/Notes"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
       
       let notes = [];
       const fetchNotes = await fetch(notesUrl, {
-        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+        headers: { 
+          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "HipliteBot/1.0", // Custom User-Agent
+        },
       });
 
       if (fetchNotes.ok) {
@@ -106,6 +114,7 @@ export default {
           Authorization: `Bearer ${env.GITHUB_TOKEN}`,
           "Accept": "application/vnd.github.v3+json",
           "Content-Type": "application/json",
+          "User-Agent": "HipliteBot/1.0", // Custom User-Agent
         },
         body: JSON.stringify({
           message: `Approved note: ${body.title}`,
@@ -127,12 +136,16 @@ export default {
 
     // 🔹 Get Only Approved Notes
     if (url.pathname === "/notes") {
-      const repo = "Hiplitehehe/Notes"; // Replace with your repo
+      const repo = "hiplitehehe/bookish-octo-robot"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
 
       const fetchNotes = await fetch(notesUrl, {
-        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+        headers: { 
+          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "HipliteBot/1.0", // Custom User-Agent
+        },
       });
 
       if (!fetchNotes.ok) {
