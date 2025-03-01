@@ -3,7 +3,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const ALLOWED_USERS = ["Hiplitehehe"];
-    const repo = "hiplitehehe/notes";
+    const repo = "Hiplitehehe/Notes";
     const notesFile = "j.json";
     const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
 
