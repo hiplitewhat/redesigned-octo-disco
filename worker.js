@@ -34,43 +34,11 @@ export default {
 
         const tokenText = await tokenResponse.text(); // Get raw response
 
-        // Show the entire GitHub response if it's unexpected
-        if (!tokenResponse.ok || !tokenText.includes("access_token")) {
-          return new Response(`<h1>GitHub Response Error</h1><pre>${tokenText}</pre>`, {
-            status: 400, headers: { "Content-Type": "text/html" }
-          });
-        }
-
-        let tokenData;
-        try {
-          tokenData = JSON.parse(tokenText);
-        } catch (err) {
-          return new Response(`<h1>JSON Parse Error</h1><pre>${tokenText}</pre>`, {
-            status: 500, headers: { "Content-Type": "text/html" }
-          });
-        }
-
-        if (!tokenData.access_token) {
-          return new Response(`<h1>Error: No Access Token</h1><pre>${tokenText}</pre>`, {
-            status: 400, headers: { "Content-Type": "text/html" }
-          });
-        }
-
-        const userResponse = await fetch("https://api.github.com/user", {
-          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        // Show the full response directly on the page
+        return new Response(`<h1>GitHub Response</h1><pre>${tokenText}</pre>`, {
+          headers: { "Content-Type": "text/html" }
         });
 
-        const userData = await userResponse.json();
-        if (!userData.login) {
-          return new Response(`<h1>Failed to Get User Data</h1><pre>${JSON.stringify(userData)}</pre>`, {
-            status: 500, headers: { "Content-Type": "text/html" }
-          });
-        }
-
-        return Response.redirect(
-          `https://hiplitehehe.github.io/bookish-octo-robot/index.html?username=${encodeURIComponent(userData.login)}&token=${tokenData.access_token}`,
-          302
-        );
       } catch (error) {
         return new Response(`<h1>Unexpected Error</h1><pre>${error.message}</pre>`, {
           status: 500, headers: { "Content-Type": "text/html" }
