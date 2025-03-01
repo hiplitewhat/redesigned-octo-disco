@@ -1,7 +1,7 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const ALLOWED_USERS = ["YourGitHubUsername"]; // Replace with your GitHub username
+    const ALLOWED_USERS = ["Hiplitehehe"]; // Replace with your GitHub username
 
     // 🔹 GitHub Login Redirect
     if (url.pathname === "/login") {
@@ -69,7 +69,7 @@ export default {
       if (!body.title) return new Response("Missing note title", { status: 400 });
 
       // Fetch current notes
-      const repo = "hiplitehehe/bookish-octo-robot"; // Replace with your repo
+      const repo = "hiplitehehe/Notes"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
       
