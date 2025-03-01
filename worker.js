@@ -139,7 +139,7 @@ export default {
 
     // 🔹 Get Only Approved Notes (with CORS & User-Agent)
     if (url.pathname === "/notes") {
-      const repo = "Hiplitehehe/bookish-octo-robot"; // Replace with your repo
+      const repo = "Hiplitehehe/Notes"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
 
