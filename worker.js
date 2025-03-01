@@ -84,7 +84,7 @@ export default {
       if (!body.title) return new Response("Missing note title", { status: 400 });
 
       // Fetch current notes
-      const repo = "hiplitehehe/notes";
+      const repo = "Hiplitehehe/Notes";
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
       
