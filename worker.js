@@ -34,10 +34,21 @@ export default {
 
         const tokenText = await tokenResponse.text(); // Get raw response
 
-        // Show the full response directly on the page
-        return new Response(`<h1>GitHub Response</h1><pre>${tokenText}</pre>`, {
-          headers: { "Content-Type": "text/html" }
-        });
+        // Extract access_token manually
+        const match = tokenText.match(/access_token=([^&]+)/);
+        const accessToken = match ? match[1] : null;
+
+        if (!accessToken) {
+          return new Response(`<h1>GitHub Response</h1><pre>${tokenText}</pre>`, {
+            headers: { "Content-Type": "text/html" }
+          });
+        }
+
+        // Redirect back to frontend with token
+        return Response.redirect(
+          `https://hiplitehehe.github.io/bookish-octo-robot/index.html?token=${accessToken}`,
+          302
+        );
 
       } catch (error) {
         return new Response(`<h1>Unexpected Error</h1><pre>${error.message}</pre>`, {
