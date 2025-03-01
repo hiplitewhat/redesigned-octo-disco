@@ -13,8 +13,7 @@ export default {
       const code = url.searchParams.get("code");
       if (!code) {
         return new Response("<h1>Error: Missing code</h1>", { 
-          status: 400, 
-          headers: { "Content-Type": "text/html" }
+          status: 400, headers: { "Content-Type": "text/html" }
         });
       }
 
@@ -34,10 +33,11 @@ export default {
         });
 
         const tokenText = await tokenResponse.text(); // Get raw response
-        if (!tokenResponse.ok) {
-          return new Response(`<h1>GitHub Error:</h1><pre>${tokenText}</pre>`, {
-            status: tokenResponse.status,
-            headers: { "Content-Type": "text/html" }
+
+        // Show the entire GitHub response if it's unexpected
+        if (!tokenResponse.ok || !tokenText.includes("access_token")) {
+          return new Response(`<h1>GitHub Response Error</h1><pre>${tokenText}</pre>`, {
+            status: 400, headers: { "Content-Type": "text/html" }
           });
         }
 
@@ -45,16 +45,14 @@ export default {
         try {
           tokenData = JSON.parse(tokenText);
         } catch (err) {
-          return new Response(`<h1>JSON Parse Error:</h1><pre>${tokenText}</pre>`, {
-            status: 500,
-            headers: { "Content-Type": "text/html" }
+          return new Response(`<h1>JSON Parse Error</h1><pre>${tokenText}</pre>`, {
+            status: 500, headers: { "Content-Type": "text/html" }
           });
         }
 
         if (!tokenData.access_token) {
           return new Response(`<h1>Error: No Access Token</h1><pre>${tokenText}</pre>`, {
-            status: 400,
-            headers: { "Content-Type": "text/html" }
+            status: 400, headers: { "Content-Type": "text/html" }
           });
         }
 
@@ -65,8 +63,7 @@ export default {
         const userData = await userResponse.json();
         if (!userData.login) {
           return new Response(`<h1>Failed to Get User Data</h1><pre>${JSON.stringify(userData)}</pre>`, {
-            status: 500,
-            headers: { "Content-Type": "text/html" }
+            status: 500, headers: { "Content-Type": "text/html" }
           });
         }
 
@@ -76,8 +73,7 @@ export default {
         );
       } catch (error) {
         return new Response(`<h1>Unexpected Error</h1><pre>${error.message}</pre>`, {
-          status: 500,
-          headers: { "Content-Type": "text/html" }
+          status: 500, headers: { "Content-Type": "text/html" }
         });
       }
     }
