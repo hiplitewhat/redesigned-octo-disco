@@ -2,7 +2,6 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // GitHub OAuth Login Redirect
     if (url.pathname === "/login") {
       return Response.redirect(
         `https://github.com/login/oauth/authorize?client_id=${env.GITHUB_CLIENT_ID}&redirect_uri=${env.REDIRECT_URI}`,
@@ -10,7 +9,6 @@ export default {
       );
     }
 
-    // GitHub OAuth Callback
     if (url.pathname === "/callback") {
       return handleCallback(request, env);
     }
@@ -34,7 +32,7 @@ async function handleCallback(request, env) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        "Accept": "application/json", // Ensure JSON response
       },
       body: JSON.stringify({
         client_id: env.GITHUB_CLIENT_ID,
@@ -44,10 +42,18 @@ async function handleCallback(request, env) {
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenText = await tokenResponse.text(); // Get raw response as text
+
+    // If GitHub returns an error, display the raw response
+    if (!tokenResponse.ok) {
+      return new Response(tokenText, { status: 400, headers: { "Content-Type": "text/plain" } });
+    }
+
+    // Parse response (ensure it's JSON format)
+    const tokenData = JSON.parse(tokenText);
 
     if (!tokenData.access_token) {
-      return new Response(`Error: ${JSON.stringify(tokenData)}`, { status: 400 });
+      return new Response(tokenText, { status: 400, headers: { "Content-Type": "text/plain" } });
     }
 
     // Fetch GitHub User Data
@@ -66,6 +72,6 @@ async function handleCallback(request, env) {
       302
     );
   } catch (error) {
-    return new Response(`Error: ${error.message}`, { status: 500 });
+    return new Response(`Error: ${error.message}`, { status: 500, headers: { "Content-Type": "text/plain" } });
   }
 }
