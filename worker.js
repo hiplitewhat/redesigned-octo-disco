@@ -74,7 +74,7 @@ export default {
       if (!body.title) return new Response("Missing note title", { status: 400, headers: corsHeaders });
 
       // Fetch current notes
-      const repo = "hiplitehehe/Notes"; // Replace with your repo
+      const repo = "Hiplitehehe/Notes"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
       
@@ -119,7 +119,7 @@ export default {
 
     // 🔹 Get Only Approved Notes
     if (url.pathname === "/notes") {
-      const repo = "hiplitehehe/bookish-octo-robot"; // Replace with your repo
+      const repo = "Hiplitehehe/Notes"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
 
