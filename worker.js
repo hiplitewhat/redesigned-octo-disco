@@ -18,18 +18,19 @@ export default {
       try {
         // Exchange code for access token
         const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json" // Ensures JSON response
-          },
-          body: JSON.stringify({
-            client_id: env.GITHUB_CLIENT_ID,
-            client_secret: env.GITHUB_CLIENT_SECRET,
-            code,
-            redirect_uri: env.REDIRECT_URI
-          })
-        });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "User-Agent": "CloudflareWorker"  // ADD THIS LINE
+  },
+  body: JSON.stringify({
+    client_id: env.GITHUB_CLIENT_ID,
+    client_secret: env.GITHUB_CLIENT_SECRET,
+    code,
+    redirect_uri: env.REDIRECT_URI
+  })
+});
 
         // Handle response errors
         if (!tokenResponse.ok) {
