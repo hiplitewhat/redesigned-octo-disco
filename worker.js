@@ -12,9 +12,9 @@ export default {
     if (url.pathname === "/callback") {
       const code = url.searchParams.get("code");
       if (!code) {
-        return new Response("<h3>Error: Missing code</h3>", {
-          headers: { "Content-Type": "text/html" },
-          status: 400
+        return new Response("<h1>Error: Missing code</h1>", { 
+          status: 400, 
+          headers: { "Content-Type": "text/html" }
         });
       }
 
@@ -23,32 +23,65 @@ export default {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Accept": "application/json",
-            "User-Agent": "CloudflareWorker"
+            "Accept": "application/json"
           },
           body: JSON.stringify({
             client_id: env.GITHUB_CLIENT_ID,
             client_secret: env.GITHUB_CLIENT_SECRET,
-            code,
+            code: code,
             redirect_uri: env.REDIRECT_URI
           })
         });
 
-        const tokenText = await tokenResponse.text();
+        const tokenText = await tokenResponse.text(); // Get raw response
+        if (!tokenResponse.ok) {
+          return new Response(`<h1>GitHub Error:</h1><pre>${tokenText}</pre>`, {
+            status: tokenResponse.status,
+            headers: { "Content-Type": "text/html" }
+          });
+        }
 
-        // Debug: Show full response on page
-        return new Response(`<h3>GitHub Response:</h3><pre>${tokenText}</pre>`, {
-          headers: { "Content-Type": "text/html" }
+        let tokenData;
+        try {
+          tokenData = JSON.parse(tokenText);
+        } catch (err) {
+          return new Response(`<h1>JSON Parse Error:</h1><pre>${tokenText}</pre>`, {
+            status: 500,
+            headers: { "Content-Type": "text/html" }
+          });
+        }
+
+        if (!tokenData.access_token) {
+          return new Response(`<h1>Error: No Access Token</h1><pre>${tokenText}</pre>`, {
+            status: 400,
+            headers: { "Content-Type": "text/html" }
+          });
+        }
+
+        const userResponse = await fetch("https://api.github.com/user", {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
         });
 
+        const userData = await userResponse.json();
+        if (!userData.login) {
+          return new Response(`<h1>Failed to Get User Data</h1><pre>${JSON.stringify(userData)}</pre>`, {
+            status: 500,
+            headers: { "Content-Type": "text/html" }
+          });
+        }
+
+        return Response.redirect(
+          `https://hiplitehehe.github.io/bookish-octo-robot/index.html?username=${encodeURIComponent(userData.login)}&token=${tokenData.access_token}`,
+          302
+        );
       } catch (error) {
-        return new Response(`<h3>Error:</h3><pre>${error.message}</pre>`, {
-          headers: { "Content-Type": "text/html" },
-          status: 500
+        return new Response(`<h1>Unexpected Error</h1><pre>${error.message}</pre>`, {
+          status: 500,
+          headers: { "Content-Type": "text/html" }
         });
       }
     }
 
-    return new Response("Not Found", { status: 404 });
-  }
+    return new Response("<h1>404 Not Found</h1>", { status: 404, headers: { "Content-Type": "text/html" } });
+  },
 };
