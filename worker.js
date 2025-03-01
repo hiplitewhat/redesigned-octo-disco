@@ -11,7 +11,12 @@ export default {
 
     if (url.pathname === "/callback") {
       const code = url.searchParams.get("code");
-      if (!code) return new Response("Error: Missing code", { status: 400 });
+      if (!code) {
+        return new Response("<h3>Error: Missing code</h3>", {
+          headers: { "Content-Type": "text/html" },
+          status: 400
+        });
+      }
 
       try {
         const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
@@ -19,7 +24,7 @@ export default {
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": "CloudflareWorker" // Ensure GitHub doesn't block the request
+            "User-Agent": "CloudflareWorker"
           },
           body: JSON.stringify({
             client_id: env.GITHUB_CLIENT_ID,
@@ -29,16 +34,35 @@ export default {
           })
         });
 
-        // Get response as plain text
         const tokenText = await tokenResponse.text();
 
-        // Return raw response directly in the page
-        return new Response(`<pre>${tokenText}</pre>`, {
-          headers: { "Content-Type": "text/html" }
-        });
+        // Check if response contains "access_token"
+        if (!tokenText.includes("access_token")) {
+          return new Response(`<h3>Error fetching token:</h3><pre>${tokenText}</pre>`, {
+            headers: { "Content-Type": "text/html" },
+            status: 500
+          });
+        }
+
+        // Parse token manually
+        const params = new URLSearchParams(tokenText);
+        const accessToken = params.get("access_token");
+
+        if (!accessToken) {
+          return new Response(`<h3>Error: No access token found</h3><pre>${tokenText}</pre>`, {
+            headers: { "Content-Type": "text/html" },
+            status: 500
+          });
+        }
+
+        // Redirect back to frontend with token
+        return Response.redirect(
+          `https://hiplitehehe.github.io/bookish-octo-robot/index.html?token=${accessToken}`,
+          302
+        );
 
       } catch (error) {
-        return new Response(`<pre>Error: ${error.message}</pre>`, {
+        return new Response(`<h3>Error:</h3><pre>${error.message}</pre>`, {
           headers: { "Content-Type": "text/html" },
           status: 500
         });
