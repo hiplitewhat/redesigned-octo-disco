@@ -46,14 +46,24 @@ async function handleCallback(request, env) {
 
     // If GitHub returns an error, display the raw response
     if (!tokenResponse.ok) {
-      return new Response(tokenText, { status: 400, headers: { "Content-Type": "text/plain" } });
+      return new Response(`GitHub Error: ${tokenText}`, { status: 400, headers: { "Content-Type": "text/plain" } });
     }
 
-    // Parse response (ensure it's JSON format)
-    const tokenData = JSON.parse(tokenText);
+    let tokenData;
+    try {
+      tokenData = JSON.parse(tokenText); // Try to parse JSON
+    } catch (error) {
+      return new Response(`Invalid JSON response from GitHub:\n\n${tokenText}`, { 
+        status: 400, 
+        headers: { "Content-Type": "text/plain" }
+      });
+    }
 
     if (!tokenData.access_token) {
-      return new Response(tokenText, { status: 400, headers: { "Content-Type": "text/plain" } });
+      return new Response(`GitHub response missing access_token:\n\n${JSON.stringify(tokenData, null, 2)}`, { 
+        status: 400, 
+        headers: { "Content-Type": "text/plain" }
+      });
     }
 
     // Fetch GitHub User Data
