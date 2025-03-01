@@ -2,19 +2,18 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const ALLOWED_USERS = ["Hiplitehehe"]; // Replace with your GitHub username
-    const repo = "Hiplitehehe/Notes"; // Your GitHub repository
-    const notesFile = "j.json"; // JSON file storing notes
+    const ALLOWED_USERS = ["Hiplitehehe"];
+    const repo = "Hiplitehehe/Notes";
+    const notesFile = "j.json";
     const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
 
-    // CORS Headers
     const corsHeaders = {
-      "Access-Control-Allow-Origin": "*", // Change if needed
+      "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Authorization, Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     };
 
-    // Handle CORS Preflight
+    // Handle CORS preflight requests
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
@@ -30,14 +29,13 @@ export default {
     // 🔹 GitHub OAuth Callback
     if (url.pathname === "/callback") {
       const code = url.searchParams.get("code");
-      if (!code) return new Response("Missing code", { status: 400 });
+      if (!code) return new Response("Missing code", { status: 400, headers: corsHeaders });
 
       const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Accept": "application/json",
-          "User-Agent": "YourApp"
+          "Accept": "application/json"
         },
         body: JSON.stringify({
           client_id: env.GITHUB_CLIENT_ID,
@@ -49,7 +47,7 @@ export default {
 
       const tokenData = await tokenResponse.json();
       if (!tokenData.access_token) {
-        return new Response(`Error: ${JSON.stringify(tokenData)}`, { status: 400 });
+        return new Response(`Error: ${JSON.stringify(tokenData)}`, { status: 400, headers: corsHeaders });
       }
 
       return Response.redirect(
@@ -58,71 +56,112 @@ export default {
       );
     }
 
-    // 🔹 Approve Note (Only Allowed Users)
-    if (url.pathname === "/approve") {
-      if (request.method !== "POST") {
-        return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
-      }
-
+    // 🔹 Create a New Note
+    if (url.pathname === "/make-note" && request.method === "POST") {
       const authHeader = request.headers.get("Authorization");
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return new Response("Unauthorized", { status: 401, headers: corsHeaders });
       }
 
       const token = authHeader.split(" ")[1];
-
-      // Verify GitHub user
       const userResponse = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${token}`, "User-Agent": "YourApp" },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const userData = await userResponse.json();
       if (!userData.login) return new Response("Invalid token", { status: 401, headers: corsHeaders });
 
-      if (!ALLOWED_USERS.includes(userData.login)) {
-        return new Response("Permission denied: You cannot approve notes.", { status: 403, headers: corsHeaders });
-      }
+      const body = await request.json();
+      if (!body.title || !body.content) return new Response("Missing title or content", { status: 400, headers: corsHeaders });
 
-      // Get note title from request
-      const body = await request.json().catch(() => null);
-      if (!body || !body.title) {
-        return new Response("Missing note title", { status: 400, headers: corsHeaders });
-      }
-
-      // Fetch current notes
       let notes = [];
-      let sha = null;
-
       const fetchNotes = await fetch(notesUrl, {
-        headers: {
-          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-          "Accept": "application/vnd.github.v3+json",
-          "User-Agent": "YourApp",
-        },
+        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
       });
 
+      let sha = null;
       if (fetchNotes.ok) {
         const fileData = await fetchNotes.json();
-        notes = JSON.parse(atob(fileData.content));
         sha = fileData.sha;
+        notes = JSON.parse(atob(fileData.content));
       }
 
-      // Add approved note
-      notes.push({ title: body.title, approved: true });
+      notes.push({ title: body.title, content: body.content, approved: false });
 
-      // Update GitHub
       const updateResponse = await fetch(notesUrl, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${env.GITHUB_TOKEN}`,
           "Accept": "application/vnd.github.v3+json",
           "Content-Type": "application/json",
-          "User-Agent": "YourApp",
+        },
+        body: JSON.stringify({
+          message: `Added note: ${body.title}`,
+          content: btoa(JSON.stringify(notes, null, 2)),
+          sha: sha || undefined,
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        return new Response("Failed to save note", { status: 500, headers: corsHeaders });
+      }
+
+      return new Response(JSON.stringify({ message: `Note "${body.title}" created!` }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: 200,
+      });
+    }
+
+    // 🔹 Approve Note (Only Allowed Users)
+    if (url.pathname === "/approve" && request.method === "POST") {
+      const authHeader = request.headers.get("Authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+
+      const token = authHeader.split(" ")[1];
+      const userResponse = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const userData = await userResponse.json();
+      if (!userData.login) return new Response("Invalid token", { status: 401, headers: corsHeaders });
+
+      if (!ALLOWED_USERS.includes(userData.login)) {
+        return new Response("Permission denied", { status: 403, headers: corsHeaders });
+      }
+
+      const body = await request.json();
+      if (!body.title) return new Response("Missing note title", { status: 400, headers: corsHeaders });
+
+      const fetchNotes = await fetch(notesUrl, {
+        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+      });
+
+      let sha = null;
+      let notes = [];
+      if (fetchNotes.ok) {
+        const fileData = await fetchNotes.json();
+        sha = fileData.sha;
+        notes = JSON.parse(atob(fileData.content));
+      }
+
+      const note = notes.find(n => n.title === body.title);
+      if (!note) return new Response("Note not found", { status: 404, headers: corsHeaders });
+
+      note.approved = true;
+
+      const updateResponse = await fetch(notesUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: `Approved note: ${body.title}`,
           content: btoa(JSON.stringify(notes, null, 2)),
-          sha, // Required to update file
+          sha,
         }),
       });
 
@@ -131,31 +170,25 @@ export default {
       }
 
       return new Response(JSON.stringify({ message: `Note "${body.title}" approved!` }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
         status: 200,
       });
     }
 
-    // 🔹 Get Only Approved Notes
+    // 🔹 Get Approved Notes
     if (url.pathname === "/notes") {
       const fetchNotes = await fetch(notesUrl, {
-        headers: {
-          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-          "Accept": "application/vnd.github.v3+json",
-          "User-Agent": "YourApp",
-        },
+        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
       });
 
       if (!fetchNotes.ok) return new Response("Failed to fetch notes", { status: 500, headers: corsHeaders });
 
       const fileData = await fetchNotes.json();
       const notes = JSON.parse(atob(fileData.content));
-
-      // Filter only approved notes
       const approvedNotes = notes.filter(note => note.approved);
 
       return new Response(JSON.stringify(approvedNotes), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
         status: 200,
       });
     }
