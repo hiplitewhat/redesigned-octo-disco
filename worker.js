@@ -124,11 +124,18 @@ export default {
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
 
       const fetchNotes = await fetch(notesUrl, {
-        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
-      });
+  headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+});
 
-      if (!fetchNotes.ok) return new Response("Failed to fetch notes", { status: 500, headers: corsHeaders });
+const responseText = await fetchNotes.text();
 
+if (!fetchNotes.ok) {
+  return new Response(`GitHub API Error: ${fetchNotes.status} - ${responseText}`, {
+    status: 500,
+    headers: { "Content-Type": "text/plain" },
+  });
+}
+    
       const fileData = await fetchNotes.json();
       const notes = JSON.parse(atob(fileData.content));
 
