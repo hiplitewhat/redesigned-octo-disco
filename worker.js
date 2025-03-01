@@ -3,15 +3,21 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const ALLOWED_USERS = ["Hiplitehehe"]; // Replace with your GitHub username
-    const USER_AGENT = "Bookish-Octo-Robot/1.0 (GitHub API Request)"; // Custom User-Agent
+    const repo = "hiplitehehe/bookish-octo-robot"; // Your GitHub repo
+    const notesFile = "j.json";
+    const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
+    const headers = {
+      Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+      "User-Agent": "bookish-octo-robot",
+      "Accept": "application/vnd.github.v3+json",
+    };
 
-    // Handle CORS Preflight Requests
+    // 🔹 CORS Setup
     if (request.method === "OPTIONS") {
       return new Response(null, {
-        status: 204,
         headers: {
           "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, POST",
           "Access-Control-Allow-Headers": "Content-Type, Authorization",
         },
       });
@@ -34,8 +40,7 @@ export default {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Accept": "application/json",
-          "User-Agent": USER_AGENT, // ✅ Added User-Agent
+          "Accept": "application/json"
         },
         body: JSON.stringify({
           client_id: env.GITHUB_CLIENT_ID,
@@ -68,115 +73,107 @@ export default {
       const token = authHeader.split(" ")[1];
 
       // Verify GitHub user
-      const userResponse = await fetch("https://api.github.com/user", {
-        headers: { 
-          "Authorization": `Bearer ${token}`, 
-          "User-Agent": USER_AGENT, // ✅ Added User-Agent
-        },
-      });
-
+      const userResponse = await fetch("https://api.github.com/user", { headers: { Authorization: `Bearer ${token}` } });
       const userData = await userResponse.json();
       if (!userData.login) return new Response("Invalid token", { status: 401 });
-
-      if (!ALLOWED_USERS.includes(userData.login)) {
-        return new Response("Permission denied: You cannot approve notes.", { status: 403 });
-      }
+      if (!ALLOWED_USERS.includes(userData.login)) return new Response("Permission denied: You cannot approve notes.", { status: 403 });
 
       // Get note title from request
       const body = await request.json();
       if (!body.title) return new Response("Missing note title", { status: 400 });
 
       // Fetch current notes
-      const repo = "hiplitehehe/Notes"; // Replace with your repo
-      const notesFile = "j.json";
-      const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
-      
       let notes = [];
-      const fetchNotes = await fetch(notesUrl, {
-        headers: { 
-          "Authorization": `Bearer ${env.GITHUB_TOKEN}`, 
-          "Accept": "application/vnd.github.v3+json",
-          "User-Agent": USER_AGENT, // ✅ Added User-Agent
-        },
-      });
-
+      let sha = null;
+      const fetchNotes = await fetch(notesUrl, { headers });
       if (fetchNotes.ok) {
         const fileData = await fetchNotes.json();
         notes = JSON.parse(atob(fileData.content));
+        sha = fileData.sha;
       }
 
-      // Add approved note
-      notes.push({ title: body.title, approved: true });
+      // Approve the note
+      notes = notes.map(note => note.title === body.title ? { ...note, approved: true } : note);
 
       // Update GitHub
       const updateResponse = await fetch(notesUrl, {
         method: "PUT",
-        headers: {
-          "Authorization": `Bearer ${env.GITHUB_TOKEN}`,
-          "Accept": "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-          "User-Agent": USER_AGENT, // ✅ Added User-Agent
-        },
+        headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
           message: `Approved note: ${body.title}`,
           content: btoa(JSON.stringify(notes, null, 2)),
-          sha: fileData.sha, // Required to update file
+          sha,
         }),
       });
 
-      if (!updateResponse.ok) {
-        return new Response("Failed to approve note", { status: 500 });
-      }
+      if (!updateResponse.ok) return new Response("Failed to approve note", { status: 500 });
 
       return new Response(JSON.stringify({ message: `Note "${body.title}" approved!` }), {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
         status: 200,
       });
     }
 
-    // 🔹 Get Only Approved Notes (with CORS & User-Agent)
+    // 🔹 Get Only Approved Notes
     if (url.pathname === "/notes") {
-      const repo = "Hiplitehehe/Notes"; // Replace with your repo
-      const notesFile = "j.json";
-      const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
+      const fetchNotes = await fetch(notesUrl, { headers });
 
-      const fetchNotes = await fetch(notesUrl, {
-        headers: { 
-          "Authorization": `Bearer ${env.GITHUB_TOKEN}`, 
-          "Accept": "application/vnd.github.v3+json",
-          "User-Agent": USER_AGENT, // ✅ Added User-Agent
-        },
-      });
+      if (!fetchNotes.ok) return new Response("Failed to fetch notes", { status: 500 });
 
-      const responseText = await fetchNotes.text();
-
-      if (!fetchNotes.ok) {
-        return new Response(`GitHub API Error: ${fetchNotes.status} - ${responseText}`, {
-          status: 500,
-          headers: {
-            "Content-Type": "text/plain",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-          },
-        });
-      }
-
-      const fileData = JSON.parse(responseText);
+      const fileData = await fetchNotes.json();
       const notes = JSON.parse(atob(fileData.content));
 
-      // Filter only approved notes
+      if (!Array.isArray(notes)) return new Response("Invalid notes format", { status: 500 });
+
       const approvedNotes = notes.filter(note => note.approved);
 
       return new Response(JSON.stringify(approvedNotes), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, OPTIONS",
-        },
+      });
+    }
+
+    // 🔹 Create New Note
+    if (url.pathname === "/make-note") {
+      if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+
+      let body;
+      try {
+        body = await request.json();
+        if (!body.title) throw new Error("Missing note title");
+      } catch (error) {
+        return new Response(`Invalid request: ${error.message}`, { status: 400 });
+      }
+
+      // Fetch existing notes
+      let notes = [];
+      let sha = null;
+      const fetchNotes = await fetch(notesUrl, { headers });
+      if (fetchNotes.ok) {
+        const fileData = await fetchNotes.json();
+        notes = JSON.parse(atob(fileData.content));
+        sha = fileData.sha;
+      }
+
+      // Add new note
+      notes.push({ title: body.title, approved: false });
+
+      // Update GitHub
+      const updateResponse = await fetch(notesUrl, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Added note: ${body.title}`,
+          content: btoa(JSON.stringify(notes, null, 2)),
+          sha,
+        }),
+      });
+
+      if (!updateResponse.ok) return new Response("Failed to save note", { status: 500 });
+
+      return new Response(JSON.stringify({ message: `Note "${body.title}" added!` }), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        status: 200,
       });
     }
 
