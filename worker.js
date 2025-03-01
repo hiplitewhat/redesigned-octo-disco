@@ -90,7 +90,7 @@ export default {
       if (!body.title) return withCORS(new Response("Missing note title", { status: 400 }));
 
       // Fetch current notes
-      const repo = "hiplitehehe/Notes"; // Your repo
+      const repo = "Hiplitehehe/Notes"; // Your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
       
