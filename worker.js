@@ -1,10 +1,8 @@
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const ALLOWED_USERS = ["Hiplitehehe"];
-    const repo = "hiplitehehe/notes";
-    const notesFile = "j.json";
-    const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
+    const ALLOWED_USERS = ["Hiplitehehe"]; // Replace with your GitHub username
 
     // 🔹 GitHub Login Redirect
     if (url.pathname === "/login") {
@@ -21,7 +19,10 @@ export default {
 
       const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({
           client_id: env.GITHUB_CLIENT_ID,
           client_secret: env.GITHUB_CLIENT_SECRET,
@@ -41,71 +42,7 @@ export default {
       );
     }
 
-    // 🔹 Make a New Note
-    if (url.pathname === "/make") {
-      if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
-
-      const authHeader = request.headers.get("Authorization");
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return new Response("Unauthorized", { status: 401 });
-      }
-
-      const token = authHeader.split(" ")[1];
-
-      // Verify GitHub user
-      const userResponse = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${token}`, "User-Agent": "HipliteBot/1.0" }
-      });
-
-      const userData = await userResponse.json();
-      if (!userData.login) return new Response("Invalid token", { status: 401 });
-
-      // Get note title & content
-      const body = await request.json();
-      if (!body.title || !body.content) return new Response("Missing note title/content", { status: 400 });
-
-      // Fetch current notes
-      let notes = [];
-      const fetchNotes = await fetch(notesUrl, {
-        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
-      });
-
-      let sha = null;
-      if (fetchNotes.ok) {
-        const fileData = await fetchNotes.json();
-        notes = JSON.parse(atob(fileData.content));
-        sha = fileData.sha; // Get file SHA for updating
-      }
-
-      // Add new note
-      notes.push({ title: body.title, content: body.content, approved: false });
-
-      // Update GitHub
-      const updateResponse = await fetch(notesUrl, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-          "Accept": "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: `Added note: ${body.title}`,
-          content: btoa(JSON.stringify(notes, null, 2)),
-          sha: sha || undefined, // Only include SHA if file exists
-        }),
-      });
-
-      if (!updateResponse.ok) {
-        return new Response("Failed to create note", { status: 500 });
-      }
-
-      return new Response(JSON.stringify({ message: `Note "${body.title}" created!` }), {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    // 🔹 Approve a Note (Only Allowed Users)
+    // 🔹 Approve Note (Only Allowed Users)
     if (url.pathname === "/approve") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
@@ -118,7 +55,7 @@ export default {
 
       // Verify GitHub user
       const userResponse = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${token}`, "User-Agent": "HipliteBot/1.0" }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const userData = await userResponse.json();
@@ -128,26 +65,27 @@ export default {
         return new Response("Permission denied: You cannot approve notes.", { status: 403 });
       }
 
-      // Get note title
+      // Get note title from request
       const body = await request.json();
       if (!body.title) return new Response("Missing note title", { status: 400 });
 
       // Fetch current notes
+      const repo = "Hiplitehehe/Notes"; // Replace with your repo
+      const notesFile = "j.json";
+      const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
+      
       let notes = [];
       const fetchNotes = await fetch(notesUrl, {
         headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
       });
 
-      let sha = null;
       if (fetchNotes.ok) {
         const fileData = await fetchNotes.json();
         notes = JSON.parse(atob(fileData.content));
-        sha = fileData.sha;
       }
 
-      // Approve note
-      const note = notes.find(n => n.title === body.title);
-      if (note) note.approved = true;
+      // Add approved note
+      notes.push({ title: body.title, approved: true });
 
       // Update GitHub
       const updateResponse = await fetch(notesUrl, {
@@ -160,7 +98,7 @@ export default {
         body: JSON.stringify({
           message: `Approved note: ${body.title}`,
           content: btoa(JSON.stringify(notes, null, 2)),
-          sha: sha || undefined,
+          sha: fileData.sha, // Required to update file
         }),
       });
 
@@ -174,8 +112,12 @@ export default {
       });
     }
 
-    // 🔹 Get Only Approved Notes
+    // 🔹 Get Only Approved Notes (with CORS enabled)
     if (url.pathname === "/notes") {
+      const repo = "Hiplitehehe/Notes"; // Replace with your repo
+      const notesFile = "j.json";
+      const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
+
       const fetchNotes = await fetch(notesUrl, {
         headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
       });
@@ -188,8 +130,15 @@ export default {
       // Filter only approved notes
       const approvedNotes = notes.filter(note => note.approved);
 
+      // CORS headers
+      const headers = new Headers();
+      headers.set("Content-Type", "application/json");
+      headers.set("Access-Control-Allow-Origin", "*");
+      headers.set("Access-Control-Allow-Methods", "GET");
+      headers.set("Access-Control-Allow-Headers", "Content-Type");
+
       return new Response(JSON.stringify(approvedNotes), {
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" },
+        headers: headers,
         status: 200,
       });
     }
