@@ -37,29 +37,9 @@ export default {
         const tokenText = await tokenResponse.text();
 
         // Debug: Show full response on page
-        if (!tokenText.includes("access_token")) {
-          return new Response(`<h3>GitHub Response (No Token Found):</h3><pre>${tokenText}</pre>`, {
-            headers: { "Content-Type": "text/html" },
-            status: 500
-          });
-        }
-
-        // Try extracting token manually
-        const tokenMatch = tokenText.match(/access_token=([^&]+)/);
-        const accessToken = tokenMatch ? tokenMatch[1] : null;
-
-        if (!accessToken) {
-          return new Response(`<h3>Error: Couldn't extract token</h3><pre>${tokenText}</pre>`, {
-            headers: { "Content-Type": "text/html" },
-            status: 500
-          });
-        }
-
-        // Redirect back with token
-        return Response.redirect(
-          `https://hiplitehehe.github.io/bookish-octo-robot/index.html?token=${accessToken}`,
-          302
-        );
+        return new Response(`<h3>GitHub Response:</h3><pre>${tokenText}</pre>`, {
+          headers: { "Content-Type": "text/html" }
+        });
 
       } catch (error) {
         return new Response(`<h3>Error:</h3><pre>${error.message}</pre>`, {
