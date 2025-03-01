@@ -3,7 +3,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const ALLOWED_USERS = ["Hiplitehehe"]; // Replace with your GitHub username
-    const repo = "hiplitehehe/bookish-octo-robot"; // Your GitHub repo
+    const repo = "Hiplitehehe/Notes"; // Your GitHub repo
     const notesFile = "j.json";
     const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
     const headers = {
