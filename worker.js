@@ -2,17 +2,18 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Authorization, Content-Type"
-    };
+    const ALLOWED_USERS = ["Hiplitehehe"]; // Replace with your GitHub username
 
-    const ALLOWED_USERS = ["Hiplitehehe"]; // Modify with allowed GitHub usernames
-
-    // 🔹 Handle CORS Preflight
+    // Handle CORS Preflight Requests
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      });
     }
 
     // 🔹 GitHub Login Redirect
@@ -42,8 +43,15 @@ export default {
         })
       });
 
-      const tokenText = await tokenResponse.text();
-      return new Response(tokenText, { headers: { ...corsHeaders, "Content-Type": "text/plain" } });
+      const tokenData = await tokenResponse.json();
+      if (!tokenData.access_token) {
+        return new Response(`Error: ${JSON.stringify(tokenData)}`, { status: 400 });
+      }
+
+      return Response.redirect(
+        `https://hiplitehehe.github.io/bookish-octo-robot/index.html?token=${tokenData.access_token}`,
+        302
+      );
     }
 
     // 🔹 Approve Note (Only Allowed Users)
@@ -52,7 +60,7 @@ export default {
 
       const authHeader = request.headers.get("Authorization");
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+        return new Response("Unauthorized", { status: 401 });
       }
 
       const token = authHeader.split(" ")[1];
@@ -63,18 +71,18 @@ export default {
       });
 
       const userData = await userResponse.json();
-      if (!userData.login) return new Response("Invalid token", { status: 401, headers: corsHeaders });
+      if (!userData.login) return new Response("Invalid token", { status: 401 });
 
       if (!ALLOWED_USERS.includes(userData.login)) {
-        return new Response("Permission denied: You cannot approve notes.", { status: 403, headers: corsHeaders });
+        return new Response("Permission denied: You cannot approve notes.", { status: 403 });
       }
 
       // Get note title from request
       const body = await request.json();
-      if (!body.title) return new Response("Missing note title", { status: 400, headers: corsHeaders });
+      if (!body.title) return new Response("Missing note title", { status: 400 });
 
       // Fetch current notes
-      const repo = "Hiplitehehe/Notes"; // Replace with your repo
+      const repo = "hiplitehehe/Notes"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
       
@@ -83,9 +91,8 @@ export default {
         headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
       });
 
-      let fileData;
       if (fetchNotes.ok) {
-        fileData = await fetchNotes.json();
+        const fileData = await fetchNotes.json();
         notes = JSON.parse(atob(fileData.content));
       }
 
@@ -103,51 +110,62 @@ export default {
         body: JSON.stringify({
           message: `Approved note: ${body.title}`,
           content: btoa(JSON.stringify(notes, null, 2)),
-          sha: fileData?.sha || undefined, // Required to update file if exists
+          sha: fileData.sha, // Required to update file
         }),
       });
 
       if (!updateResponse.ok) {
-        return new Response("Failed to approve note", { status: 500, headers: corsHeaders });
+        return new Response("Failed to approve note", { status: 500 });
       }
 
       return new Response(JSON.stringify({ message: `Note "${body.title}" approved!` }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
         status: 200,
       });
     }
 
-    // 🔹 Get Only Approved Notes
+    // 🔹 Get Only Approved Notes (with CORS)
     if (url.pathname === "/notes") {
-      const repo = "Hiplitehehe/Notes"; // Replace with your repo
+      const repo = "hiplitehehe/bookish-octo-robot"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
 
       const fetchNotes = await fetch(notesUrl, {
-  headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
-});
+        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+      });
 
-const responseText = await fetchNotes.text();
+      const responseText = await fetchNotes.text();
 
-if (!fetchNotes.ok) {
-  return new Response(`GitHub API Error: ${fetchNotes.status} - ${responseText}`, {
-    status: 500,
-    headers: { "Content-Type": "text/plain" },
-  });
-}
-    
-      const fileData = await fetchNotes.json();
+      if (!fetchNotes.ok) {
+        return new Response(`GitHub API Error: ${fetchNotes.status} - ${responseText}`, {
+          status: 500,
+          headers: {
+            "Content-Type": "text/plain",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+          },
+        });
+      }
+
+      const fileData = JSON.parse(responseText);
       const notes = JSON.parse(atob(fileData.content));
 
       // Filter only approved notes
       const approvedNotes = notes.filter(note => note.approved);
 
       return new Response(JSON.stringify(approvedNotes), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+        },
       });
     }
 
-    return new Response("Not Found", { status: 404, headers: corsHeaders });
+    return new Response("Not Found", { status: 404 });
   },
 };
