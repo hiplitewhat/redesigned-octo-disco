@@ -3,6 +3,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const ALLOWED_USERS = ["Hiplitehehe"]; // Replace with your GitHub username
+    const USER_AGENT = "Bookish-Octo-Robot/1.0 (GitHub API Request)"; // Custom User-Agent
 
     // Handle CORS Preflight Requests
     if (request.method === "OPTIONS") {
@@ -33,7 +34,8 @@ export default {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          "Accept": "application/json",
+          "User-Agent": USER_AGENT, // ✅ Added User-Agent
         },
         body: JSON.stringify({
           client_id: env.GITHUB_CLIENT_ID,
@@ -67,7 +69,10 @@ export default {
 
       // Verify GitHub user
       const userResponse = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          "Authorization": `Bearer ${token}`, 
+          "User-Agent": USER_AGENT, // ✅ Added User-Agent
+        },
       });
 
       const userData = await userResponse.json();
@@ -88,7 +93,11 @@ export default {
       
       let notes = [];
       const fetchNotes = await fetch(notesUrl, {
-        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+        headers: { 
+          "Authorization": `Bearer ${env.GITHUB_TOKEN}`, 
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": USER_AGENT, // ✅ Added User-Agent
+        },
       });
 
       if (fetchNotes.ok) {
@@ -103,9 +112,10 @@ export default {
       const updateResponse = await fetch(notesUrl, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+          "Authorization": `Bearer ${env.GITHUB_TOKEN}`,
           "Accept": "application/vnd.github.v3+json",
           "Content-Type": "application/json",
+          "User-Agent": USER_AGENT, // ✅ Added User-Agent
         },
         body: JSON.stringify({
           message: `Approved note: ${body.title}`,
@@ -127,14 +137,18 @@ export default {
       });
     }
 
-    // 🔹 Get Only Approved Notes (with CORS)
+    // 🔹 Get Only Approved Notes (with CORS & User-Agent)
     if (url.pathname === "/notes") {
       const repo = "hiplitehehe/bookish-octo-robot"; // Replace with your repo
       const notesFile = "j.json";
       const notesUrl = `https://api.github.com/repos/${repo}/contents/${notesFile}`;
 
       const fetchNotes = await fetch(notesUrl, {
-        headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, "Accept": "application/vnd.github.v3+json" },
+        headers: { 
+          "Authorization": `Bearer ${env.GITHUB_TOKEN}`, 
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": USER_AGENT, // ✅ Added User-Agent
+        },
       });
 
       const responseText = await fetchNotes.text();
