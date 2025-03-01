@@ -39,10 +39,16 @@ export default {
         const accessToken = match ? match[1] : null;
 
         if (!accessToken) {
-          return new Response(`<h1>GitHub Response</h1><pre>${tokenText}</pre>`, {
-            headers: { "Content-Type": "text/html" }
-          });
-        }
+          return new Response(`
+  <html>
+    <head>
+      <meta http-equiv="refresh" content="0;url=https://hiplitehehe.github.io/bookish-octo-robot/index.html?token=${accessToken}">
+    </head>
+    <body>
+      <p>Redirecting... If not, click <a href="https://hiplitehehe.github.io/bookish-octo-robot/index.html?token=${accessToken}">here</a>.</p>
+    </body>
+  </html>
+`, { headers: { "Content-Type": "text/html" } });
 
         // Redirect back to frontend with token
         return Response.redirect(
