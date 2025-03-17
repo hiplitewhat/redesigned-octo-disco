@@ -6,85 +6,52 @@ export default {
     // Serve HTML from KV
     if (url.pathname === "/") {
       const html = await env.NOTES_KV.get("index.html");
-      if (!html) return new Response("HTML not found in KV", { status: 404 });
       return new Response(html, { headers: { "Content-Type": "text/html" } });
     }
 
-    // GitHub Login Redirect
+    // Redirect to Discord login
     if (url.pathname === "/login") {
       return Response.redirect(
-        `https://github.com/login/oauth/authorize?client_id=${env.GITHUB_CLIENT_ID}&scope=repo`,
+        `https://discord.com/oauth2/authorize?client_id=${env.DISCORD_CLIENT_ID}&response_type=code&scope=identify&redirect_uri=${env.REDIRECT_URI}`,
         302
       );
     }
 
-    // GitHub OAuth Callback
+    // Handle Discord OAuth Callback
     if (url.pathname === "/callback") {
       const code = url.searchParams.get("code");
       if (!code) return new Response("Missing code", { status: 400 });
 
-      const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+      const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({
-          client_id: env.GITHUB_CLIENT_ID,
-          client_secret: env.GITHUB_CLIENT_SECRET,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: env.DISCORD_CLIENT_ID,
+          client_secret: env.DISCORD_CLIENT_SECRET,
           code,
+          grant_type: "authorization_code",
+          redirect_uri: env.REDIRECT_URI,
         }),
       });
 
       const { access_token } = await tokenResponse.json();
+      if (!access_token) return new Response("Login failed", { status: 500 });
+
       return new Response(`<script>localStorage.setItem("token", "${access_token}"); window.location.href = "/";</script>`, {
         headers: { "Content-Type": "text/html" },
       });
     }
 
-    // Get Notes from GitHub
-    if (url.pathname === "/get-notes") {
+    // Get user info
+    if (url.pathname === "/user") {
       const token = request.headers.get("Authorization");
       if (!token) return new Response("Unauthorized", { status: 401 });
 
-      const notesResponse = await fetch(`https://api.github.com/repos/Hiplitehehe/Notes/contents/notes.json`, {
+      const userResponse = await fetch("https://discord.com/api/users/@me", {
         headers: { "Authorization": `Bearer ${token}` },
       });
 
-      if (!notesResponse.ok) return new Response("Error fetching notes", { status: 500 });
-
-      const notesData = await notesResponse.json();
-      const content = atob(notesData.content);
-      return new Response(content, { headers: { "Content-Type": "application/json" } });
-    }
-
-    // Save Notes to GitHub
-    if (url.pathname === "/save-note") {
-      const token = request.headers.get("Authorization");
-      if (!token) return new Response("Unauthorized", { status: 401 });
-
-      const { note } = await request.json();
-      const existingNotesResponse = await fetch(`https://api.github.com/repos/Hiplitehehe/Notes/contents/notes.json`, {
-        headers: { "Authorization": `Bearer ${token}` },
-      });
-
-      let notes = [];
-      let sha = "";
-
-      if (existingNotesResponse.ok) {
-        const existingNotes = await existingNotesResponse.json();
-        sha = existingNotes.sha;
-        notes = JSON.parse(atob(existingNotes.content));
-      }
-
-      notes.push(note);
-      const content = btoa(JSON.stringify(notes, null, 2));
-
-      const saveResponse = await fetch(`https://api.github.com/repos/Hiplitehehe/Notes/contents/notes.json`, {
-        method: "PUT",
-        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Updated notes", content, sha }),
-      });
-
-      if (!saveResponse.ok) return new Response("Error saving note", { status: 500 });
-      return new Response("Note saved", { status: 200 });
+      return new Response(await userResponse.text(), { headers: { "Content-Type": "application/json" } });
     }
 
     return new Response("Not Found", { status: 404 });
