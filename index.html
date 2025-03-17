@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GitHub Notes</title>
+  <title>Discord Notes</title>
 </head>
 <body>
-  <h1>GitHub Notes</h1>
-  <button id="loginBtn" onclick="login()">Login with GitHub</button>
+  <h1>Discord Notes</h1>
+  <button id="loginBtn" onclick="login()">Login with Discord</button>
 
   <div id="notesSection" style="display: none;">
+    <h2 id="userWelcome"></h2>
     <textarea id="noteInput" placeholder="Write your note here..."></textarea>
     <button onclick="saveNote()">Save Note</button>
     <ul id="notesList"></ul>
@@ -17,34 +18,23 @@
   </div>
 
   <script>
-    const API_URL = "https://patient-fog-62ed.hiplitehehe.workers.dev"; 
+    const API_URL = "https://your-cloudflare-worker.workers.dev"; 
 
     function login() {
       window.location.href = `${API_URL}/login`;
     }
 
-    async function saveNote() {
-      let note = document.getElementById("noteInput").value;
-      if (!note) return alert("Note cannot be empty!");
-
-      let res = await fetch(`${API_URL}/save-note`, {
-        method: "POST",
-        headers: { "Authorization": localStorage.getItem("token") },
-        body: JSON.stringify({ note }),
-      });
-
-      if (res.ok) loadNotes();
-    }
-
-    async function loadNotes() {
-      let res = await fetch(`${API_URL}/get-notes`, {
+    async function loadUser() {
+      let res = await fetch(`${API_URL}/user`, {
         headers: { "Authorization": localStorage.getItem("token") },
       });
 
-      let notes = await res.json();
-      document.getElementById("notesList").innerHTML = notes.map(n => `<li>${n}</li>`).join("");
-      document.getElementById("notesSection").style.display = "block";
-      document.getElementById("loginBtn").style.display = "none";
+      if (res.ok) {
+        let user = await res.json();
+        document.getElementById("userWelcome").innerText = `Welcome, ${user.username}!`;
+        document.getElementById("notesSection").style.display = "block";
+        document.getElementById("loginBtn").style.display = "none";
+      }
     }
 
     function logout() {
@@ -52,7 +42,7 @@
       location.reload();
     }
 
-    if (localStorage.getItem("token")) loadNotes();
+    if (localStorage.getItem("token")) loadUser();
   </script>
 </body>
 </html>
