@@ -1,48 +1,62 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Discord Notes</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Uploader</title>
 </head>
 <body>
-  <h1>Discord Notes</h1>
-  <button id="loginBtn" onclick="login()">Login with Discord</button>
+    <h1>YouTube Uploader</h1>
+    
+    <!-- Login Button -->
+    <button onclick="login()">Login with Google</button>
+    
+    <!-- Upload Form -->
+    <h2>Upload Video</h2>
+    <input type="file" id="videoFile">
+    <input type="text" id="title" placeholder="Video Title">
+    <input type="text" id="description" placeholder="Video Description">
+    <button onclick="uploadVideo()">Upload</button>
 
-  <div id="notesSection" style="display: none;">
-    <h2 id="userWelcome"></h2>
-    <textarea id="noteInput" placeholder="Write your note here..."></textarea>
-    <button onclick="saveNote()">Save Note</button>
-    <ul id="notesList"></ul>
-    <button onclick="logout()">Logout</button>
-  </div>
+    <script>
+        function login() {
+            window.location.href = "https://your-cloudflare-worker-url.com/login";
+        }
 
-  <script>
-    const API_URL = "https://patient-fog-62ed.hiplitehehe.workers.dev"; 
+        async function uploadVideo() {
+            const fileInput = document.getElementById("videoFile");
+            if (!fileInput.files.length) {
+                alert("Please select a video file.");
+                return;
+            }
 
-    function login() {
-      window.location.href = `${API_URL}/login`;
-    }
+            const file = fileInput.files[0];
+            const title = document.getElementById("title").value || "Untitled Video";
+            const description = document.getElementById("description").value || "";
 
-    async function loadUser() {
-      let res = await fetch(`${API_URL}/user`, {
-        headers: { "Authorization": localStorage.getItem("token") },
-      });
+            // Upload file to a temporary storage (Discord or R2)
+            const formData = new FormData();
+            formData.append("file", file);
 
-      if (res.ok) {
-        let user = await res.json();
-        document.getElementById("userWelcome").innerText = `Welcome, ${user.username}!`;
-        document.getElementById("notesSection").style.display = "block";
-        document.getElementById("loginBtn").style.display = "none";
-      }
-    }
+            const storageResponse = await fetch("https://tmpfiles.org/api/upload", {
+                method: "POST",
+                body: formData
+            });
 
-    function logout() {
-      localStorage.removeItem("token");
-      location.reload();
-    }
+            const storageData = await storageResponse.json();
+            const videoUrl = storageData.data.url;
 
-    if (localStorage.getItem("token")) loadUser();
-  </script>
+            // Send video URL to Cloudflare Worker
+            const response = await fetch("https://your-cloudflare-worker-url.com/upload", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ videoUrl, title, description })
+            });
+
+            const data = await response.json();
+            alert(`Video uploaded! Watch here: ${data.url}`);
+        }
+    </script>
 </body>
 </html>
