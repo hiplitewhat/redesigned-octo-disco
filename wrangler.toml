@@ -1,5 +1,10 @@
-name = "falling-heart-7255"
+name = "your-worker-name"
 type = "javascript"
+
+[env.production]
+kv_namespaces = [
+  { binding = "MY_KV", id = "your-kv-namespace-id" }
+]
 
 account_id = "4806f2425c6560e67d083f843b83dd5d"
 workers_dev = true
