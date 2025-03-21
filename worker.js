@@ -27,8 +27,8 @@ async function handleCallback(url) {
   const code = url.searchParams.get("code");
   if (!code) return new Response("Missing code", { status: 400 });
 
-  const clientId = "YOUR_GOOGLE_CLIENT_ID";
-  const clientSecret = "YOUR_GOOGLE_CLIENT_SECRET";
+  const clientId = "790695082520-ruumnpram2c2md8icib6vljm0h0tqq7u.apps.googleusercontent.com";
+  const clientSecret = "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";
   const redirectUri = "https://falling-heart-7255.hiplitehehe.workers.dev/callback";
 
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
