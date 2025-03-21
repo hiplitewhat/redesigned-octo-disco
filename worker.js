@@ -1,5 +1,6 @@
+
 export default {
-  async fetch(req) {
+  async fetch(req, env) {
     const url = new URL(req.url);
 
     // Allow cross-origin requests
@@ -15,31 +16,31 @@ export default {
     }
 
     if (url.pathname === "/login") {
-      return handleLogin(headers);
+      return handleLogin(headers, env);
     } else if (url.pathname === "/callback") {
-      return handleCallback(url, headers);
+      return handleCallback(url, headers, env);
     } else if (url.pathname === "/upload" && req.method === "POST") {
-      return handleUpload(req, headers);
+      return handleUpload(req, headers, env);
     }
 
     return new Response("Not Found", { status: 404 });
   }
 };
 
-async function handleLogin(headers) {
-  const clientId = "790695082520-ruumnpram2c2md8icib6vljm0h0tqq7u.apps.googleusercontent.com";
+async function handleLogin(headers, env) {
+  const clientId = env.GOOGLE_CLIENT_ID;  // Use environment variable
   const redirectUri = "https://falling-heart-7255.hiplitehehe.workers.dev/callback";
   const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=https://www.googleapis.com/auth/youtube.upload&access_type=offline&prompt=consent`;
 
   return new Response(null, { status: 302, headers: { ...headers, Location: authUrl } });
 }
 
-async function handleCallback(url, headers) {
+async function handleCallback(url, headers, env) {
   const code = url.searchParams.get("code");
   if (!code) return new Response("Missing code", { status: 400, headers });
 
-  const clientId = "790695082520-ruumnpram2c2md8icib6vljm0h0tqq7u.apps.googleusercontent.com";
-  const clientSecret = "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";
+  const clientId = env.GOOGLE_CLIENT_ID;  // Use environment variable
+  const clientSecret = env.GOOGLE_CLIENT_SECRET;  // Use environment variable
   const redirectUri = "https://falling-heart-7255.hiplitehehe.workers.dev/callback";
 
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -62,7 +63,7 @@ async function handleCallback(url, headers) {
   return new Response("Login successful! Tokens saved.", { headers });
 }
 
-async function handleUpload(req, headers) {
+async function handleUpload(req, headers, env) {
   const formData = await req.formData();
   const videoFile = formData.get("video");
   const title = formData.get("title");
@@ -72,9 +73,9 @@ async function handleUpload(req, headers) {
   if (!tokenData) return new Response("❌ No login found.", { status: 403, headers });
 
   const tokens = JSON.parse(tokenData);
-  
+
   const youtubeApi = "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status";
-  
+
   const metadata = {
     snippet: { title, description, categoryId: "22" },
     status: { privacyStatus: "public" }
