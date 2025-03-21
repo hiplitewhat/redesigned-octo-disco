@@ -3,7 +3,7 @@ type = "javascript"
 
 [env.production]
 kv_namespaces = [
-  { binding = "MY_KV", id = "your-kv-namespace-id" }
+  { binding = "MY_KV", id = "43053e4868674332ac6aa4e983db86f0" }
 ]
 
 account_id = "4806f2425c6560e67d083f843b83dd5d"
