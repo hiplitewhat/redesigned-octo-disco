@@ -29,7 +29,7 @@ async function handleCallback(url) {
 
   const clientId = "YOUR_GOOGLE_CLIENT_ID";
   const clientSecret = "YOUR_GOOGLE_CLIENT_SECRET";
-  const redirectUri = "YOUR_WORKER_URL/callback";
+  const redirectUri = "https://falling-heart-7255.hiplitehehe.workers.dev/callback";
 
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
