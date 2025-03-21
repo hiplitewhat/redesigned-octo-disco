@@ -36,10 +36,20 @@
 
             // Send the video file to the backend API
             try {
-                const response = await fetch("https://falling-heart-7255.hiplitehehe.workers.dev/upload", {
-                    method: "POST",
-                    body: formData
-                });
+                const uploadResponse = await fetch(youtubeApi, {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${tokens.access_token}`,
+    "Content-Type": "multipart/form-data", // Optional: FormData sets this automatically
+  },
+  body: form
+});
+
+if (!uploadResponse.ok) {
+  const error = await uploadResponse.json();
+  console.log('Upload Error:', error);
+  return new Response(`❌ Error uploading video: ${error.message}`, { status: 500 });
+}
 
                 const result = await response.json();
                 if (response.ok) {
