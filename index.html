@@ -6,61 +6,105 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Video Upload</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-        input, button { margin: 10px; padding: 10px; font-size: 16px; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-size: 16px;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .status {
+            text-align: center;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <h1>Upload a Video to YouTube</h1>
-    <input type="file" id="fileInput">
-    <input type="text" id="titleInput" placeholder="Video Title">
-    <textarea id="descriptionInput" placeholder="Video Description"></textarea>
-    <button onclick="uploadVideo()">Upload</button>
-    <p id="status"></p>
+
+    <div class="container">
+        <h1>YouTube Video Upload</h1>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <label for="title">Video Title</label>
+            <input type="text" id="title" name="title" required>
+
+            <label for="description">Video Description</label>
+            <input type="text" id="description" name="description">
+
+            <label for="video">Select Video File</label>
+            <input type="file" id="video" name="video" accept="video/*" required>
+
+            <button type="submit">Upload Video</button>
+        </form>
+
+        <div class="status" id="status"></div>
+    </div>
 
     <script>
-        async function uploadVideo() {
-            const fileInput = document.getElementById("fileInput");
-            const titleInput = document.getElementById("titleInput");
-            const descriptionInput = document.getElementById("descriptionInput");
+        const uploadForm = document.getElementById('uploadForm');
+        const statusDiv = document.getElementById('status');
 
-            if (!fileInput.files.length) {
-                document.getElementById("status").innerText = "❌ No file selected!";
-                return;
-            }
+        uploadForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
 
-            const formData = new FormData();
-            formData.append("video", fileInput.files[0]);
-            formData.append("title", titleInput.value);
-            formData.append("description", descriptionInput.value);
+            // Clear previous status
+            statusDiv.innerHTML = '';
 
-            // Send the video file to the backend API
+            const formData = new FormData(uploadForm);
+
             try {
-                const uploadResponse = await fetch(youtubeApi, {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${tokens.access_token}`,
-    "Content-Type": "multipart/form-data", // Optional: FormData sets this automatically
-  },
-  body: form
-});
-
-if (!uploadResponse.ok) {
-  const error = await uploadResponse.json();
-  console.log('Upload Error:', error);
-  return new Response(`❌ Error uploading video: ${error.message}`, { status: 500 });
-}
+                const response = await fetch('https://falling-heart-7255.hiplitehehe.workers.dev/upload', {
+                    method: 'POST',
+                    body: formData
+                });
 
                 const result = await response.json();
+
                 if (response.ok) {
-                    document.getElementById("status").innerHTML = `✅ Video uploaded successfully! <a href="https://www.youtube.com/watch?v=${result.videoId}" target="_blank">View on YouTube</a>`;
+                    statusDiv.innerHTML = `Video uploaded successfully! Watch it <a href="https://www.youtube.com/watch?v=${result.videoId}" target="_blank">here</a>.`;
                 } else {
-                    document.getElementById("status").innerText = `❌ Upload failed: ${result.error || "Unknown error"}`;
+                    statusDiv.innerHTML = `Error: ${result.error || 'Unknown error occurred.'}`;
                 }
             } catch (error) {
-                document.getElementById("status").innerText = `❌ Error: ${error.message}`;
+                statusDiv.innerHTML = `Error: ${error.message}`;
             }
-        }
+        });
     </script>
+
 </body>
 </html>
