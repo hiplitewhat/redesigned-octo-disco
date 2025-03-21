@@ -4,58 +4,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Uploader</title>
+    <title>YouTube Video Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        input, button { margin: 10px; padding: 10px; font-size: 16px; }
+    </style>
 </head>
 <body>
-    <h1>YouTube Uploader</h1>
-    
-    <!-- Login Button -->
-    <button onclick="login()">Login with Google</button>
-    
-    <!-- Upload Form -->
-    <h2>Upload Video</h2>
-    <input type="file" id="videoFile">
-    <input type="text" id="title" placeholder="Video Title">
-    <input type="text" id="description" placeholder="Video Description">
+    <h1>Upload a Video to YouTube</h1>
+    <input type="file" id="fileInput">
+    <input type="text" id="titleInput" placeholder="Video Title">
+    <textarea id="descriptionInput" placeholder="Video Description"></textarea>
     <button onclick="uploadVideo()">Upload</button>
+    <p id="status"></p>
 
     <script>
-        function login() {
-            window.location.href = "https://falling-heart-7255.hiplitehehe.workers.dev/login";
-        }
-
         async function uploadVideo() {
-            const fileInput = document.getElementById("videoFile");
+            const fileInput = document.getElementById("fileInput");
+            const titleInput = document.getElementById("titleInput");
+            const descriptionInput = document.getElementById("descriptionInput");
+
             if (!fileInput.files.length) {
-                alert("Please select a video file.");
+                document.getElementById("status").innerText = "❌ No file selected!";
                 return;
             }
 
-            const file = fileInput.files[0];
-            const title = document.getElementById("title").value || "Untitled Video";
-            const description = document.getElementById("description").value || "";
-
-            // Upload file to a temporary storage (Discord or R2)
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("video", fileInput.files[0]);
+            formData.append("title", titleInput.value);
+            formData.append("description", descriptionInput.value);
 
-            const storageResponse = await fetch("https://tmpfiles.org/api/upload", {
-                method: "POST",
-                body: formData
-            });
+            // Send the video file to the backend API
+            try {
+                const response = await fetch("https://your-cloudflare-worker-url/upload", {
+                    method: "POST",
+                    body: formData
+                });
 
-            const storageData = await storageResponse.json();
-            const videoUrl = storageData.data.url;
-
-            // Send video URL to Cloudflare Worker
-            const response = await fetch("https://falling-heart-7255.hiplitehehe.workers.dev/upload", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ videoUrl, title, description })
-            });
-
-            const data = await response.json();
-            alert(`Video uploaded! Watch here: ${data.url}`);
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById("status").innerHTML = `✅ Video uploaded successfully! <a href="https://www.youtube.com/watch?v=${result.videoId}" target="_blank">View on YouTube</a>`;
+                } else {
+                    document.getElementById("status").innerText = `❌ Upload failed: ${result.error || "Unknown error"}`;
+                }
+            } catch (error) {
+                document.getElementById("status").innerText = `❌ Error: ${error.message}`;
+            }
         }
     </script>
 </body>
