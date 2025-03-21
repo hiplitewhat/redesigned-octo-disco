@@ -16,8 +16,8 @@ export default {
 };
 
 async function handleLogin() {
-  const clientId = "YOUR_GOOGLE_CLIENT_ID";
-  const redirectUri = "YOUR_WORKER_URL/callback";
+  const clientId = "790695082520-ruumnpram2c2md8icib6vljm0h0tqq7u.apps.googleusercontent.com";
+  const redirectUri = "https://falling-heart-7255.hiplitehehe.workers.dev/callback";
   const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=https://www.googleapis.com/auth/youtube.upload&access_type=offline&prompt=consent`;
 
   return Response.redirect(authUrl, 302);
