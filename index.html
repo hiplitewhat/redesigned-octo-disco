@@ -21,7 +21,7 @@
 
     <script>
         function login() {
-            window.location.href = "https://your-cloudflare-worker-url.com/login";
+            window.location.href = "https://falling-heart-7255.hiplitehehe.workers.dev/login";
         }
 
         async function uploadVideo() {
@@ -48,7 +48,7 @@
             const videoUrl = storageData.data.url;
 
             // Send video URL to Cloudflare Worker
-            const response = await fetch("https://your-cloudflare-worker-url.com/upload", {
+            const response = await fetch("https://falling-heart-7255.hiplitehehe.workers.dev/upload", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ videoUrl, title, description })
