@@ -1,14 +1,13 @@
-
 export default {
-  async fetch(req) {
+  async fetch(req, env) { // Add 'env' to access KV
     const url = new URL(req.url);
 
     if (url.pathname === "/login") {
       return handleLogin();
     } else if (url.pathname === "/callback") {
-      return handleCallback(url);
+      return handleCallback(url, env); // Pass 'env'
     } else if (url.pathname === "/upload" && req.method === "POST") {
-      return handleUpload(req);
+      return handleUpload(req, env); // Pass 'env'
     }
 
     return new Response("Not Found", { status: 404 });
@@ -23,7 +22,7 @@ async function handleLogin() {
   return Response.redirect(authUrl, 302);
 }
 
-async function handleCallback(url) {
+async function handleCallback(url, env) { // Accept 'env'
   const code = url.searchParams.get("code");
   if (!code) return new Response("Missing code", { status: 400 });
 
@@ -46,15 +45,15 @@ async function handleCallback(url) {
   const tokens = await tokenResponse.json();
   if (tokens.error) return new Response(tokens.error, { status: 400 });
 
-  await MY_KV.put("youtube_tokens", JSON.stringify(tokens));
+  await env.MY_KV.put("youtube_tokens", JSON.stringify(tokens)); // Use 'env'
 
-  return new Response("Login successful! Tokens saved.");
+  return new Response("✅ Login successful! Tokens saved.");
 }
 
-async function handleUpload(req) {
+async function handleUpload(req, env) { // Accept 'env'
   const { videoUrl, title, description } = await req.json();
 
-  const tokenData = await MY_KV.get("youtube_tokens");
+  const tokenData = await env.MY_KV.get("youtube_tokens"); // Use 'env'
   if (!tokenData) return new Response("❌ No login found.", { status: 403 });
 
   const tokens = JSON.parse(tokenData);
