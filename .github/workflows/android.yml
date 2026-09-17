@@ -50,7 +50,23 @@ jobs:
         run: gradle wrapper --gradle-version 8.4
 
       - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleDebug --stacktrace 2>&1 | tee build.log
+
+      # Gradle log downloads are not always reachable; surface the interesting
+      # part of a failed build as check annotations instead.
+      - name: Report build errors as annotations
+        if: failure()
+        run: |
+          {
+            echo "::error::===== build.log tail ====="
+            echo "::error::$(tail -c 3500 build.log | tr '\n' '|')"
+          }
+          grep -nE "e: |error:|FAILURE:|Caused by:|> Task .* FAILED" build.log | head -8 | while IFS= read -r l; do
+            echo "::error::${l:0:380}"
+          done
+          exit 1
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
