@@ -3,6 +3,8 @@ package com.example.gameaudiostream
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.example.gameaudiostream.receiver.ReceiverActivity
+import com.example.gameaudiostream.sender.SenderActivity
 import com.google.android.material.button.MaterialButton
 
 /**
