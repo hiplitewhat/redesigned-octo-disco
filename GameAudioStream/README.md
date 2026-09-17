@@ -70,6 +70,13 @@ gradle wrapper --gradle-version 8.4   # once, if gradlew is not present yet
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
+### Option C — GitHub Actions (no local tooling needed)
+
+`.github/workflows/android.yml` builds a debug APK on every push/PR that
+touches `GameAudioStream/**`. Download the `GameAudioStream-debug-apk`
+artifact from the run page and `adb install` it — no local Android SDK
+required.
+
 ## How to use
 
 1. Install the app on **both** phones and connect both to the same Wi-Fi.
