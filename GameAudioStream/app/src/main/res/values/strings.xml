@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App / main screen -->
+    <string name="app_name">Game Audio Stream</string>
+    <string name="main_title">Game Audio Stream</string>
+    <string name="main_subtitle">Stream internal game audio from one phone to another over Wi-Fi</string>
+    <string name="main_btn_send">Send Audio</string>
+    <string name="main_btn_send_desc">Capture this device’s game audio and stream it to the other phone</string>
+    <string name="main_btn_receive">Receive Audio</string>
+    <string name="main_btn_receive_desc">Play game audio streamed from the other phone</string>
+    <string name="main_hint_format">PCM 16-bit · 44.1 kHz · stereo · TCP port 8888</string>
+
+    <!-- Sender screen -->
+    <string name="sender_title">Sender</string>
+    <string name="sender_step_hint">1. Start the receiver on the other phone.\n2. Enter its IP address below.\n3. Tap Start and allow audio capture.</string>
+    <string name="sender_ip_label">Receiver IP address</string>
+    <string name="sender_ip_helper">The receiver screen shows its address</string>
+    <string name="sender_btn_start">Start Sending</string>
+    <string name="sender_btn_stop">Stop Sending</string>
+    <string name="sender_status_initial">Not streaming. Enter the receiver’s IP, then tap Start.</string>
+    <string name="sender_status_connecting">Connecting to %1$s:%2$d…</string>
+    <string name="sender_status_streaming">Streaming game audio to %1$s</string>
+    <string name="sender_status_stopped">Not streaming.</string>
+    <string name="sender_status_stopping">Stopping…</string>
+    <string name="sender_status_stopped_by_system">Capture was stopped by the system.</string>
+
+    <!-- Sender errors -->
+    <string name="sender_error_missing_arguments">Cannot start: missing capture permission or receiver IP.</string>
+    <string name="sender_error_projection">Audio capture was rejected: %1$s</string>
+    <string name="sender_error_projection_unavailable">Audio capture is unavailable: %1$s</string>
+    <string name="sender_error_consent_denied">Permission denied — audio capture needs the “Record/cast screen” consent.</string>
+    <string name="sender_error_record_audio_denied">Permission denied — the Record Audio permission is required to capture audio.</string>
+    <string name="sender_error_ip_empty">Enter the receiver’s IP address first.</string>
+    <string name="sender_error_ip_invalid">“%1$s” is not a valid IP address.</string>
+    <string name="sender_error_stream">Streaming failed: %1$s</string>
+    <string name="sender_error_unknown_host">Unknown host %1$s — check the receiver IP.</string>
+    <string name="sender_error_refused">Connection refused (%1$s) — start the receiver first and check the IP.</string>
+    <string name="sender_error_timeout">Connection timed out — check the IP and that both phones are on the same Wi-Fi.</string>
+
+    <!-- Receiver screen -->
+    <string name="receiver_title">Receiver</string>
+    <string name="receiver_device_address_label">This phone’s address</string>
+    <string name="receiver_ip_unavailable">unavailable — connect to Wi-Fi</string>
+    <string name="receiver_address_helper">Enter this address in the sender app on the other phone.</string>
+    <string name="receiver_btn_start">Start Receiving</string>
+    <string name="receiver_btn_stop">Stop Receiving</string>
+    <string name="receiver_status_initial">Not listening. Tap Start, then press “Send Audio” on the other phone.</string>
+    <string name="receiver_status_waiting">Listening on port %1$d — waiting for a sender…</string>
+    <string name="receiver_status_waiting_again">Sender disconnected — waiting for a new connection…</string>
+    <string name="receiver_status_streaming">Connected to %1$s — playing audio</string>
+    <string name="receiver_status_starting">Starting receiver…</string>
+    <string name="receiver_status_stopping">Stopping…</string>
+    <string name="receiver_status_stopped">Not listening.</string>
+    <string name="receiver_note_same_network">Both phones must be on the same Wi-Fi network.</string>
+    <string name="receiver_unknown_sender">sender</string>
+
+    <!-- Receiver errors -->
+    <string name="receiver_error_stream">Receiver failed: %1$s</string>
+    <string name="receiver_error_port">Could not open port %1$d (%2$s) — another app may be using it.</string>
+
+    <!-- Foreground-service notifications -->
+    <string name="sender_notification_title">Sending game audio</string>
+    <string name="sender_notification_starting">Starting audio capture…</string>
+    <string name="receiver_notification_title">Receiving game audio</string>
+    <string name="receiver_notification_starting">Waiting for a sender…</string>
+    <string name="notification_action_stop">Stop</string>
+    <string name="notif_channel_sender">Sender status</string>
+    <string name="notif_channel_sender_desc">Shown while this device is streaming game audio</string>
+    <string name="notif_channel_receiver">Receiver status</string>
+    <string name="notif_channel_receiver_desc">Shown while this device is waiting for or playing a stream</string>
+
+    <!-- Toasts -->
+    <string name="toast_streaming_started">Streaming started</string>
+    <string name="toast_streaming_stopped">Streaming stopped</string>
+    <string name="toast_receiver_started">Receiver listening on port 8888</string>
+    <string name="toast_receiver_stopped">Receiver stopped</string>
+    <string name="toast_sender_disconnected">Sender disconnected</string>
+    <string name="toast_stream_error">Stream error</string>
+</resources>
