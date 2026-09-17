@@ -1,0 +1,60 @@
+name: Android Build
+
+on:
+  push:
+    paths:
+      - 'GameAudioStream/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'GameAudioStream/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: GameAudioStream
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.4 with caching
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.4'
+          # Caches are written on main, only read on other branches/PRs.
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # The binary gradle-wrapper.jar is not committed, so generate the
+      # wrapper once here; all later steps use it.
+      - name: Generate Gradle wrapper
+        run: gradle wrapper --gradle-version 8.4
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GameAudioStream-debug-apk
+          path: GameAudioStream/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
