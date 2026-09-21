@@ -1,0 +1,3 @@
+rbxBinaryParser.js is bundled from
+https://github.com/MrSprinkleToes/rbxBinaryParser
+and is licensed under the MIT License.
