@@ -1,110 +1,236 @@
-
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Video Upload</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Studio Lite</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' rx='6' fill='%232f6fed'/%3E%3Cpath d='M6 22 L16 6 L26 22 Z' fill='%23fff'/%3E%3Crect x='13' y='16' width='6' height='10' fill='%232f6fed'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="https://unpkg.com/7.css@0.21.1/dist/7.css" />
+    <link rel="stylesheet" href="./app/app.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        label {
-            display: block;
-            margin: 10px 0 5px;
-            font-size: 16px;
-        }
-        input[type="text"], input[type="file"] {
-            width: 100%;
-            padding: 8px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #28a745;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #218838;
-        }
-        .status {
-            text-align: center;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <h1>YouTube Video Upload</h1>
-
-        <form id="uploadForm" enctype="multipart/form-data">
-            <label for="title">Video Title</label>
-            <input type="text" id="title" name="title" required>
-
-            <label for="description">Video Description</label>
-            <input type="text" id="description" name="description">
-
-            <label for="video">Select Video File</label>
-            <input type="file" id="video" name="video" accept="video/*" required>
-
-            <button type="submit">Upload Video</button>
+      }
+    </script>
+  </head>
+  <body>
+    <div class="title-bar active">
+      <div class="title-bar-text title-bar-icon icon-studio">Studio Lite</div>
+      <div class="title-bar-controls" style="margin-right: 5px">
+        <form action="https://github.com/Asicosilomu/studio-lite" target="_blank">
+          <button type="submit" class="github">Original</button>
         </form>
+      </div>
+      <div class="title-bar-controls">
+        <button aria-label="Minimize"></button>
+        <button aria-label="Maximize"></button>
+        <button aria-label="Close"></button>
+      </div>
+    </div>
+    <ul role="menubar" class="can-hover">
+      <li role="menuitem" tabindex="0" aria-haspopup="true">
+        File
+        <ul role="menu">
+          <li role="menuitem" id="menuitem-renderimage"><a>Render image...</a></li>
+          <li role="menuitem" id="menuitem-missingassets"><a>Missing assets...</a></li>
+          <li role="menuitem" id="menuitem-reload"><a>Reload</a></li>
+        </ul>
+      </li>
+      <li role="menuitem" tabindex="0" aria-haspopup="true">
+        Edit
+        <ul role="menu">
+          <li role="menuitem" id="menuitem-zoomto"><a>Zoom to <span>F</span></a></li>
+        </ul>
+      </li>
+      <li role="menuitem" tabindex="0" aria-haspopup="true">
+        View
+        <ul role="menu">
+          <li role="menuitem" class="has-divider">
+            <input type="checkbox" id="menuitem-skybox" checked />
+            <label for="menuitem-skybox">Render skybox</label>
+          </li>
+          <li role="menuitem">
+            <input type="checkbox" id="menuitem-stats" />
+            <label for="menuitem-stats">Stats</label>
+          </li>
+          <li role="menuitem">
+            <input type="checkbox" id="menuitem-axes" />
+            <label for="menuitem-axes">Axes Helper</label>
+          </li>
+          <li role="menuitem">
+            <input type="checkbox" id="menuitem-hoverbox" checked />
+            <label for="menuitem-hoverbox">Outline on Hover</label>
+          </li>
+          <li role="menuitem">
+            <input type="checkbox" id="menuitem-selectionbox" checked />
+            <label for="menuitem-selectionbox">Outline on Select</label>
+          </li>
+        </ul>
+      </li>
+      <li role="menuitem" tabindex="0" aria-haspopup="true">
+        Help
+        <ul role="menu">
+          <li role="menuitem" id="menuitem-controls"><a>Controls</a></li>
+          <li role="menuitem" id="menuitem-changelog"><a>View Changelog</a></li>
+          <li role="menuitem" id="menuitem-about"><a>About Studio Lite</a></li>
+        </ul>
+      </li>
+    </ul>
 
-        <div class="status" id="status"></div>
+    <div class="hud-help">
+      Click-drag to look · WASD move · Q/E up-down · Shift sprint · F zoom to part
     </div>
 
-    <script>
-        const uploadForm = document.getElementById('uploadForm');
-        const statusDiv = document.getElementById('status');
+    <div class="message" style="display: none"><span></span></div>
+    <div class="onboarding" style="display: none">
+      <h1>Studio Lite</h1>
+      <p class="subtitle">A web viewer for Roblox place and model files</p>
+      <button id="load-demo">Enter Lite Plaza</button>
+      <h1 style="font-size: 22px; margin: 10px 0 4px">or</h1>
+      <button id="load-remote">Load file from server</button>
+      <label for="browse">Open from your computer (RBXL / RBXM / RBXLX / RBXMX)</label>
+      <input type="file" id="browse" accept=".rbxl,.rbxm,.rbxlx,.rbxmx" />
+      <p class="hint">
+        Binary and XML files are supported. Click a part to inspect it, open a script in Explorer to read its source,
+        and use File → Render image for a PNG of the current view.
+      </p>
+    </div>
+    <div class="editor" style="display: none"></div>
+    <div class="drop-overlay">Drop a place file to open it</div>
 
-        uploadForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
+    <div class="rightPane">
+      <div class="window glass active">
+        <div class="title-bar">
+          <div class="title-bar-text">Explorer</div>
+        </div>
+        <div class="window-body">
+          <menu role="tablist">
+            <button role="tab" aria-controls="datamodel-explorer" aria-selected="true">DataModel</button>
+            <button role="tab" aria-controls="scene-explorer">THREE.js Scene</button>
+          </menu>
+          <article id="datamodel-explorer" class="tree"></article>
+          <article id="scene-explorer" class="tree2" style="display: none"></article>
+        </div>
+      </div>
+      <div class="window glass active">
+        <div class="title-bar">
+          <div class="title-bar-text" id="propertiesTitle">Properties</div>
+        </div>
+        <div class="properties window-body">
+          <span class="loader animate" style="display: none"></span>
+          <table>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-            // Clear previous status
-            statusDiv.innerHTML = '';
+    <div class="console window glass active">
+      <div class="title-bar">
+        <div class="title-bar-text">Console</div>
+      </div>
+      <div class="log window-body"></div>
+    </div>
 
-            const formData = new FormData(uploadForm);
+    <div class="status-bar">
+      <p class="status-bar-field status">Ready</p>
+      <div class="status-bar-field flexcenter">
+        <div role="progressbar" class="animate"></div>
+      </div>
+    </div>
 
-            try {
-                const response = await fetch('https://falling-heart-7255.hiplitehehe.workers.dev/upload', {
-                    method: 'POST',
-                    body: formData
-                });
+    <dialog id="remoteload">
+      <div class="window glass active is-bright">
+        <div class="title-bar">
+          <div class="title-bar-text">Load from server</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" class="close"></button>
+          </div>
+        </div>
+        <div class="window-body has-space">
+          <h2 class="instruction instruction-primary">Enter the path to an RBXL / RBXLX file on the server…</h2>
+          <input type="text" id="remotepath" style="width: 100%" autofocus />
+          <br /><br />
+          <h2 class="instruction instruction-primary">…or click an example below.</h2>
+          <ul role="listbox" class="has-hover" id="examples"></ul>
+        </div>
+        <footer style="text-align: right">
+          <button class="open" disabled>Open</button>
+          <button class="cancel">Cancel</button>
+        </footer>
+      </div>
+    </dialog>
 
-                const result = await response.json();
+    <dialog id="about">
+      <div class="window glass active is-bright">
+        <div class="title-bar">
+          <div class="title-bar-text">About Studio Lite</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" class="close"></button>
+          </div>
+        </div>
+        <div class="window-body has-space">
+          Studio Lite — a web viewer for Roblox place and model files.<br />
+          Inspired by Asicosilomu's Studio Lite.<br /><br />
+          This project is made possible by multiple open source libraries.<br />
+          See notice for more information.<br /><br />
+          Studio Lite is not affiliated with or endorsed by Roblox Corporation.
+        </div>
+        <footer style="text-align: right">
+          <button class="view-notice">View notice</button>
+          <button class="ok">OK</button>
+        </footer>
+      </div>
+    </dialog>
 
-                if (response.ok) {
-                    statusDiv.innerHTML = `Video uploaded successfully! Watch it <a href="https://www.youtube.com/watch?v=${result.videoId}" target="_blank">here</a>.`;
-                } else {
-                    statusDiv.innerHTML = `Error: ${result.error || 'Unknown error occurred.'}`;
-                }
-            } catch (error) {
-                statusDiv.innerHTML = `Error: ${error.message}`;
-            }
-        });
-    </script>
+    <dialog id="render">
+      <div class="window glass active is-bright">
+        <div class="title-bar">
+          <div class="title-bar-text">Render image</div>
+          <div class="title-bar-controls">
+            <button aria-label="Close" class="close"></button>
+          </div>
+        </div>
+        <div class="window-body has-space">
+          <p>Click the button below to render an image of the viewport.</p>
+          <button id="dorender">Render</button>
+          <br />
+          <span>Image resolution: <input type="number" id="renderwidth" /> × <input type="number" id="renderheight" /></span>
+          <p>Your image will appear below. Right click to save.</p>
+          <img alt="Rendered image" style="max-width: 80vw; max-height: 70vh" />
+        </div>
+        <footer style="text-align: right">
+          <button class="ok">Close</button>
+        </footer>
+      </div>
+    </dialog>
 
-</body>
+    <dialog id="notepad">
+      <div class="window glass active is-bright">
+        <div class="title-bar">
+          <div class="title-bar-text" id="dialog-title">Notepad</div>
+          <div class="title-bar-controls">
+            <button aria-label="Minimize"></button>
+            <button aria-label="Maximize"></button>
+            <button aria-label="Close" class="close"></button>
+          </div>
+        </div>
+        <div class="window-body">
+          <ul role="menubar">
+            <li role="menuitem" tabindex="0">File</li>
+            <li role="menuitem" tabindex="0">Edit</li>
+            <li role="menuitem" tabindex="0">Format</li>
+            <li role="menuitem" tabindex="0">View</li>
+            <li role="menuitem" tabindex="0">Help</li>
+          </ul>
+          <textarea readonly></textarea>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="./app/app.js" type="module"></script>
+  </body>
 </html>
