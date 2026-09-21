@@ -1,9 +1,9 @@
 import Stats from "three/addons/libs/stats.module.js";
-import { StudioLiteRenderer, partClasses } from "./rendering/StudioLiteRenderer.js";
-import { sleep, rgbToHex, formatNumber } from "./etc/Helpers.js";
-import { iconFor, THREE_CLASS_ICONS } from "./etc/Icons.js";
-import ExplorerTree from "./ui/ExplorerTree.js";
-import { createDemoPlace } from "./demo/DemoPlace.js";
+import { StudioLiteRenderer, partClasses } from "./rendering/StudioLiteRenderer.js?v=5";
+import { sleep, rgbToHex, formatNumber } from "./etc/Helpers.js?v=5";
+import { iconFor, THREE_CLASS_ICONS } from "./etc/Icons.js?v=5";
+import ExplorerTree from "./ui/ExplorerTree.js?v=5";
+import { createDemoPlace } from "./demo/DemoPlace.js?v=5";
 
 const titleBar = document.body.querySelector(".title-bar");
 const sstat = document.body.querySelector("#menuitem-stats");
@@ -43,13 +43,19 @@ function threeNodeToTreeData(nodes) {
 
 let treeRefresh2 = () => {};
 
+function isNarrow() {
+  return window.innerWidth < 960;
+}
+
 function viewportSize() {
   return {
     get width() {
-      return Math.max(200, window.innerWidth - 400);
+      return Math.max(200, window.innerWidth - (isNarrow() ? 0 : 400));
     },
     get height() {
-      return Math.max(160, window.innerHeight - 178 - 58 - 26);
+      const dock = isNarrow() ? 48 : 0;
+      const cons = isNarrow() ? 0 : 178;
+      return Math.max(160, window.innerHeight - cons - 58 - 26 - dock);
     },
   };
 }
@@ -322,19 +328,82 @@ sbx2.addEventListener("input", () => {
   renderer.removeSelectionBoxesIfNeeded();
 });
 
-let clickStart = null;
-renderer.domElement.addEventListener("mousedown", (e) => {
-  clickStart = { x: e.clientX, y: e.clientY };
-});
-renderer.domElement.addEventListener("mouseup", (e) => {
-  if (!clickStart) return;
-  const dx = e.clientX - clickStart.x;
-  const dy = e.clientY - clickStart.y;
-  clickStart = null;
-  if (dx * dx + dy * dy > 16) return;
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!renderer.controls.wasTap()) return;
   const hit = renderer.pickInstanceAt(e.clientX, e.clientY);
   if (hit && hit.treeId != null) dataTree.select(hit.treeId, true);
 });
+
+const fly = renderer.controls;
+const stick = document.body.querySelector("#move-stick");
+const knob = stick && stick.querySelector(".stick-knob");
+if (stick && knob) {
+  const maxR = 40;
+  const setStick = (clientX, clientY) => {
+    const r = stick.querySelector(".stick-base").getBoundingClientRect();
+    let x = clientX - (r.left + r.width / 2);
+    let y = clientY - (r.top + r.height / 2);
+    const len = Math.hypot(x, y) || 1;
+    const s = Math.min(1, len / maxR);
+    x = (x / len) * s;
+    y = (y / len) * s;
+    fly.moveRight = x > 0.22;
+    fly.moveLeft = x < -0.22;
+    fly.moveForward = y < -0.22;
+    fly.moveBackward = y > 0.22;
+    knob.style.transform = `translate(${x * maxR}px, ${y * maxR}px)`;
+  };
+  const resetStick = () => {
+    fly.moveRight = fly.moveLeft = fly.moveForward = fly.moveBackward = false;
+    knob.style.transform = "";
+  };
+  stick.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    stick.setPointerCapture(e.pointerId);
+    setStick(e.clientX, e.clientY);
+  });
+  stick.addEventListener("pointermove", (e) => {
+    if (!stick.hasPointerCapture(e.pointerId)) return;
+    setStick(e.clientX, e.clientY);
+  });
+  stick.addEventListener("pointerup", resetStick);
+  stick.addEventListener("pointercancel", resetStick);
+}
+
+for (const btn of document.body.querySelectorAll(".touch-btns [data-act]")) {
+  const apply = (down) => {
+    const act = btn.getAttribute("data-act");
+    if (act === "up") fly.moveUp = down;
+    else if (act === "down") fly.moveDown = down;
+    else if (act === "sprint") fly.sprint = down;
+  };
+  btn.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    apply(true);
+  });
+  btn.addEventListener("pointerup", () => apply(false));
+  btn.addEventListener("pointercancel", () => apply(false));
+  btn.addEventListener("lostpointercapture", () => apply(false));
+}
+
+function setPanel(name) {
+  const classes = ["panel-explorer", "panel-properties", "panel-console"];
+  const current = classes.find((c) => document.body.classList.contains(c));
+  for (const c of classes) document.body.classList.remove(c);
+  for (const b of document.body.querySelectorAll(".mobile-dock [data-panel]")) {
+    b.setAttribute("aria-pressed", "false");
+  }
+  if (name && current !== "panel-" + name) {
+    document.body.classList.add("panel-" + name);
+    const btn = document.body.querySelector(`.mobile-dock [data-panel="${name}"]`);
+    if (btn) btn.setAttribute("aria-pressed", "true");
+  }
+}
+
+for (const btn of document.body.querySelectorAll(".mobile-dock [data-panel]")) {
+  btn.addEventListener("click", () => setPanel(btn.getAttribute("data-panel")));
+}
 
 async function finishLoad() {
   wireViewToggles();
@@ -418,11 +487,13 @@ async function start() {
       print(`DataModel Loading ${file}`);
       placeName = file.split("/").pop();
       status.textContent = `Fetching ${placeName}`;
+      msg.querySelector("span").textContent = `Fetching ${placeName}…`;
       const fileData = await fetch(file);
       if (fileData.status !== 200) throw new Error("Failed to fetch");
       bar.classList.remove("paused");
       status.textContent = `Loading ${placeName}`;
-      await sleep(120);
+      msg.querySelector("span").textContent = `Decoding ${placeName} (this can take a while)…`;
+      await sleep(50);
       await startFromBuffer(await fileData.arrayBuffer(), placeName);
     } else {
       print(`DataModel Loading ${file.name}`);
@@ -438,6 +509,9 @@ async function start() {
 }
 
 document.body.querySelector("#menuitem-reload").addEventListener("click", () => window.location.reload());
+document.body.querySelector("#menuitem-rbxm2sl").addEventListener("click", () => {
+  window.open("./rbxm2sl.html", "_blank");
+});
 
 function openNotepad(fileName, text) {
   const dlg = document.body.querySelector("#notepad");
@@ -550,7 +624,7 @@ menurender.addEventListener("click", () => {
   dlg.showModal();
 });
 
-const examples = ["examples/Lite-Plaza.rbxlx"];
+const examples = ["examples/Uploaded.rbxl", "examples/Lite-Plaza.rbxlx"];
 
 function openRemoteDialog() {
   const dlg = document.body.querySelector("#remoteload");
@@ -591,6 +665,11 @@ function openRemoteDialog() {
   dlg.showModal();
 }
 
+document.body.querySelector("#load-uploaded").addEventListener("click", async () => {
+  file = "examples/Uploaded.rbxl";
+  await start();
+});
+
 document.body.querySelector("#load-demo").addEventListener("click", async () => {
   if (placeLoaded && placeName === "Lite Plaza") {
     if (sal) sal.style.display = "none";
@@ -613,6 +692,7 @@ browse.addEventListener("input", () => {
 });
 
 window.addEventListener("resize", () => renderer.resize());
+window.addEventListener("orientationchange", () => setTimeout(() => renderer.resize(), 250));
 
 const tree = document.body.querySelector(".tree");
 const tree2 = document.body.querySelector(".tree2");
@@ -671,36 +751,19 @@ window.addEventListener("drop", (e) => {
 });
 
 setTitle("Start Page");
-print("Welcome to Studio Lite!");
-print("Open the built-in Lite Plaza, or drop a binary/XML Roblox place file here.");
+print("Welcome to Studio Lite! (parser v4)");
+print("Loading uploaded place — ~37MB, this can take a few seconds…");
 
-sal.style.display = "flex";
+sal.style.display = "none";
 rendering = true;
 treeRefresh2();
 
-const demoBtn = document.body.querySelector("#load-demo");
-demoBtn.disabled = true;
-
 (async () => {
+  file = "examples/Uploaded.rbxl";
   try {
-    jsTreeData.length = 0;
-    await renderer.loadDataModel(createDemoPlace(), jsTreeData);
-    for (const item of jsTreeData) {
-      const stack = [item];
-      while (stack.length) {
-        const n = stack.pop();
-        n.icon = iconFor(n.className);
-        if (n.children) for (const c of n.children) stack.push(c);
-      }
-    }
-    dataTree.setData(jsTreeData);
-    placeName = "Lite Plaza";
-    setTitle("Start Page");
-    placeLoaded = true;
-    menurender.removeAttribute("aria-disabled");
-    wireViewToggles();
-    print("Demo plaza is ready under the welcome screen.");
+    await start();
   } catch (err) {
-    print("Could not preload demo: " + err);
+    print("Could not auto-load uploaded place: " + err);
+    if (sal) sal.style.display = "flex";
   }
 })();

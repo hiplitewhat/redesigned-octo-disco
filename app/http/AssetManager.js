@@ -1,4 +1,4 @@
-import { tryToFetch_status } from "./TryToFetch.js";
+import { tryToFetch_status } from "./TryToFetch.js?v=5";
 
 export default class AssetManager {
   constructor(conf) {

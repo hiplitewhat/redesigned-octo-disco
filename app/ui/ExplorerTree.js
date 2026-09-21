@@ -1,4 +1,4 @@
-import { iconFor } from "../etc/Icons.js";
+import { iconFor } from "../etc/Icons.js?v=5";
 
 export default class ExplorerTree {
   constructor(container, { onSelect } = {}) {

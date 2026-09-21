@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>Studio Lite</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' rx='6' fill='%232f6fed'/%3E%3Cpath d='M6 22 L16 6 L26 22 Z' fill='%23fff'/%3E%3Crect x='13' y='16' width='6' height='10' fill='%232f6fed'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="https://unpkg.com/7.css@0.21.1/dist/7.css" />
-    <link rel="stylesheet" href="./app/app.css" />
+    <link rel="stylesheet" href="./app/app.css?v=5" />
     <script type="importmap">
       {
         "imports": {
@@ -36,6 +38,7 @@
         <ul role="menu">
           <li role="menuitem" id="menuitem-renderimage"><a>Render image...</a></li>
           <li role="menuitem" id="menuitem-missingassets"><a>Missing assets...</a></li>
+          <li role="menuitem" id="menuitem-rbxm2sl"><a>rbxm2sl converter...</a></li>
           <li role="menuitem" id="menuitem-reload"><a>Reload</a></li>
         </ul>
       </li>
@@ -84,15 +87,34 @@
       Click-drag to look · WASD move · Q/E up-down · Shift sprint · F zoom to part
     </div>
 
+    <div class="touch-controls" aria-hidden="true">
+      <div class="stick" id="move-stick">
+        <div class="stick-base"><div class="stick-knob"></div></div>
+        <div class="stick-label">Move</div>
+      </div>
+      <div class="touch-btns">
+        <button type="button" data-act="up">Up</button>
+        <button type="button" data-act="down">Down</button>
+        <button type="button" data-act="sprint">Sprint</button>
+      </div>
+    </div>
+
+    <nav class="mobile-dock" aria-label="Panels">
+      <button type="button" data-panel="explorer">Explorer</button>
+      <button type="button" data-panel="properties">Properties</button>
+      <button type="button" data-panel="console">Console</button>
+    </nav>
+
     <div class="message" style="display: none"><span></span></div>
     <div class="onboarding" style="display: none">
       <h1>Studio Lite</h1>
       <p class="subtitle">A web viewer for Roblox place and model files</p>
+      <button id="load-uploaded">Open uploaded place</button>
       <button id="load-demo">Enter Lite Plaza</button>
       <h1 style="font-size: 22px; margin: 10px 0 4px">or</h1>
       <button id="load-remote">Load file from server</button>
       <label for="browse">Open from your computer (RBXL / RBXM / RBXLX / RBXMX)</label>
-      <input type="file" id="browse" accept=".rbxl,.rbxm,.rbxlx,.rbxmx" />
+      <input type="file" id="browse" accept=".rbxl,.rbxm,.rbxlx,.rbxmx,.txt" />
       <p class="hint">
         Binary and XML files are supported. Click a part to inspect it, open a script in Explorer to read its source,
         and use File → Render image for a PNG of the current view.
@@ -231,6 +253,6 @@
       </div>
     </dialog>
 
-    <script src="./app/app.js" type="module"></script>
+    <script src="./app/app.js?v=4" type="module"></script>
   </body>
 </html>

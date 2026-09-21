@@ -1,5 +1,5 @@
-import { cframe, color3, vec3 } from "../etc/Helpers.js";
-import { instance } from "../datamodel/DataModelUtils.js";
+import { cframe, color3, vec3 } from "../etc/Helpers.js?v=5";
+import { instance } from "../datamodel/DataModelUtils.js?v=5";
 
 function part({
   name = "Part",

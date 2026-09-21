@@ -11,10 +11,13 @@
 html, body {
   margin: 0;
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
+  overscroll-behavior: none;
   font-family: "Segoe UI", Tahoma, sans-serif;
   background: var(--aero);
   --window-background-color: #805ba5;
+  -webkit-text-size-adjust: 100%;
 }
 
 dialog {
@@ -376,3 +379,171 @@ canvas {
 .drop-overlay.show { display: flex; }
 
 menu[role="tablist"] { margin-bottom: 4px; }
+
+.touch-controls,
+.mobile-dock {
+  display: none;
+}
+
+.stick {
+  position: absolute;
+  left: 16px;
+  bottom: calc(var(--status-h) + 64px);
+  z-index: 7;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.stick-base {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: rgba(20, 12, 32, 0.38);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.stick-knob {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -24px 0 0 -24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.stick-label {
+  text-align: center;
+  color: #fff;
+  font-size: 11px;
+  margin-top: 4px;
+  text-shadow: 0 1px 2px #000;
+  opacity: 0.8;
+}
+
+.touch-btns {
+  position: absolute;
+  right: 12px;
+  bottom: calc(var(--status-h) + 64px);
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.touch-btns button {
+  min-width: 72px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mobile-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--status-h);
+  height: 48px;
+  z-index: 12;
+  background: rgba(255, 255, 255, 0.92);
+  border-top: 1px solid #8e8e8e;
+  display: none;
+  align-items: stretch;
+}
+
+.mobile-dock button {
+  flex: 1;
+  font-size: 13px;
+  border: none;
+  border-right: 1px solid #cfcfcf;
+  background: transparent;
+}
+
+.mobile-dock button:last-child { border-right: none; }
+
+.mobile-dock button[aria-pressed="true"] {
+  background: #cce8ff;
+  font-weight: 700;
+}
+
+@media (pointer: coarse) {
+  .touch-controls { display: block; }
+  .hud-help { display: none; }
+}
+
+@media (max-width: 960px) {
+  :root {
+    --side-w: 0px;
+    --console-h: 0px;
+    --dock-h: 48px;
+  }
+
+  .mobile-dock { display: flex; }
+
+  .rightPane {
+    left: 0;
+    width: 100%;
+    height: min(58vh, 480px);
+    top: auto;
+    bottom: calc(var(--status-h) + 48px);
+    transform: translateY(110%);
+    transition: transform 0.2s ease;
+    z-index: 14;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.25);
+  }
+
+  body.panel-explorer .rightPane,
+  body.panel-properties .rightPane {
+    transform: none;
+  }
+
+  body.panel-explorer .rightPane > .window:last-child,
+  body.panel-properties .rightPane > .window:first-child {
+    display: none;
+  }
+
+  .console {
+    width: 100%;
+    height: min(42vh, 320px);
+    top: auto;
+    bottom: calc(var(--status-h) + 48px);
+    transform: translateY(110%);
+    transition: transform 0.2s ease;
+    z-index: 15;
+  }
+
+  body.panel-console .console { transform: none; }
+
+  .message, .onboarding, .editor {
+    width: 100%;
+    height: calc(100dvh - var(--chrome-h) - var(--status-h) - 48px);
+  }
+
+  .onboarding {
+    padding: 12px 16px 72px;
+    overflow: auto;
+  }
+
+  .onboarding h1 { font-size: 28px; }
+
+  .onboarding > button {
+    width: min(320px, 86vw);
+    font-size: 18px;
+    min-height: 44px;
+  }
+
+  .explorer-row { height: 32px; }
+  .explorer-label { font-size: 14px; }
+
+  body > ul[role="menubar"] {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .title-bar-controls { display: none; }
+}

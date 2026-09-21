@@ -1,12 +1,12 @@
 import * as THREE from "three";
-import { decode } from "../thirdparty/rbxBinaryParser.js";
-import FlyCamera from "../controls/FlyCamera.js";
-import { findByClassName } from "../datamodel/DataModelUtils.js";
-import { decodeXml } from "../datamodel/XmlParser.js";
-import { parseMesh } from "./mesh/MeshParser.js";
-import { tryToFetch } from "../http/TryToFetch.js";
-import AssetManager from "../http/AssetManager.js";
-import { rotationMatrixFromCFrame, sniffRobloxFile } from "../etc/Helpers.js";
+import { decode } from "../datamodel/BinaryParser.js?v=5";
+import FlyCamera from "../controls/FlyCamera.js?v=5";
+import { findByClassName } from "../datamodel/DataModelUtils.js?v=5";
+import { decodeXml } from "../datamodel/XmlParser.js?v=5";
+import { parseMesh } from "./mesh/MeshParser.js?v=5";
+import { tryToFetch } from "../http/TryToFetch.js?v=5";
+import AssetManager from "../http/AssetManager.js?v=5";
+import { rotationMatrixFromCFrame, sniffRobloxFile } from "../etc/Helpers.js?v=5";
 
 const decalSides = ["Right", "Left", "Top", "Bottom", "Back", "Front"];
 export const partClasses = [
@@ -58,7 +58,7 @@ export class StudioLiteRenderer {
       sharedFunctions: { print: this.conf.sharedFunctions.print },
     });
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(70, this.conf.width / this.conf.height, 0.1, 20000);
+    this.camera = new THREE.PerspectiveCamera(70, this.conf.width / this.conf.height, 0.1, 250000);
     this.camera.rotation.order = "YXZ";
     this.camera.position.set(28, 16, 36);
     this.camera.lookAt(0, 4, 0);
@@ -120,7 +120,7 @@ export class StudioLiteRenderer {
       const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false });
       return mat;
     });
-    const geometry = new THREE.BoxGeometry(12000, 12000, 12000);
+    const geometry = new THREE.BoxGeometry(200000, 200000, 200000);
     if (this.skybox) this.scene.remove(this.skybox);
     this.skybox = new THREE.Mesh(geometry, faces);
     this.skybox.name = "Skybox";
@@ -297,7 +297,7 @@ export class StudioLiteRenderer {
       });
       material.push(mat);
     }
-    const geometry = new THREE.BoxGeometry(12000, 12000, 12000);
+    const geometry = new THREE.BoxGeometry(200000, 200000, 200000);
     this.skybox = new THREE.Mesh(geometry, material);
     this.skybox.position.set(0, 0, 0);
     this.skybox.name = "Skybox";
@@ -545,6 +545,9 @@ export class StudioLiteRenderer {
       treeData.push(item);
       if (render && partClasses.indexOf(child.ClassName) !== -1) {
         await this.renderPart(child, false, item.id);
+        if (this.threeids.length % 80 === 0) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
       }
       await this.traverse(child, item.children, render ? true : child.ClassName === "Workspace" || this.noWorkspace);
     }
@@ -577,7 +580,41 @@ export class StudioLiteRenderer {
     }
   }
 
+  frameRenderedParts() {
+    const box = new THREE.Box3();
+    let any = false;
+    for (const child of this.scene.children) {
+      if (child.isMesh && child !== this.skybox && !child.isLineSegments) {
+        box.expandByObject(child);
+        any = true;
+      }
+    }
+    if (!any || box.isEmpty()) return;
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z, 4);
+    const dist = maxDim * 1.35 + 12;
+    this.camera.near = Math.max(0.1, maxDim / 2000);
+    this.camera.far = Math.max(50000, maxDim * 40);
+    this.camera.updateProjectionMatrix();
+    this.camera.position.set(center.x + dist * 0.7, center.y + dist * 0.4, center.z + dist * 0.7);
+    this.camera.lookAt(center);
+    this.camera.rotation.order = "YXZ";
+    if (this.controls) this.controls.syncEulerFromCamera();
+    this.sun.position.set(center.x + maxDim, center.y + maxDim, center.z + maxDim * 0.5);
+    if (this.skybox) this.skybox.position.copy(center);
+    this.conf.sharedFunctions.print(
+      `Framed ${Math.round(size.x)}×${Math.round(size.y)}×${Math.round(size.z)} studs at (${center.x.toFixed(1)}, ${center.y.toFixed(1)}, ${center.z.toFixed(1)})`
+    );
+  }
+
   async loadDataModel(data, treeTarget) {
+    const meaningful = (data || []).filter(
+      (n) => n && ((n.Children && n.Children.length) || partClasses.indexOf(n.ClassName) !== -1)
+    );
+    if (meaningful.length) data = meaningful;
     this.data = data;
     this.clearPlaceMeshes();
     this.buildProceduralSkybox();
@@ -585,16 +622,14 @@ export class StudioLiteRenderer {
 
     const workspace = findByClassName(data, "Workspace");
     this.noWorkspace = !workspace;
+    let placedCamera = false;
     try {
       const root = this.noWorkspace ? findByClassName(data, "Model") : workspace;
       const robloxCamera = findByClassName((root && root.Children) || [], "Camera");
       const cameraFrame = robloxCamera && (robloxCamera.CFrame || robloxCamera.CoordinateFrame);
-      if (cameraFrame) this.zoomTo(cameraFrame, false);
-      else {
-        this.camera.position.set(28, 16, 36);
-        this.camera.lookAt(0, 4, 0);
-        this.camera.rotation.order = "YXZ";
-        this.controls.syncEulerFromCamera();
+      if (cameraFrame) {
+        this.zoomTo(cameraFrame, false);
+        placedCamera = true;
       }
     } catch {
       this.conf.sharedFunctions.print("Could not determine camera position!");
@@ -621,6 +656,7 @@ export class StudioLiteRenderer {
 
     treeTarget.length = 0;
     await this.traverse({ Children: this.data }, treeTarget);
+    if (!placedCamera) this.frameRenderedParts();
   }
 
   async loadPlace(ab) {
@@ -629,6 +665,7 @@ export class StudioLiteRenderer {
     if (kind === "xml") {
       data = decodeXml(ab);
     } else if (kind === "binary") {
+      console.log("Decoding with Studio Lite parser v4…");
       data = decode(ab);
     } else {
       try {
