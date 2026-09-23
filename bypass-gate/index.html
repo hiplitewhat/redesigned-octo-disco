@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bypass Gate — Test Bench</title>
+<style>
+  body { font-family: system-ui, Arial, sans-serif; background: #10131a; color: #e8eaf2; margin: 0; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 48px 20px; }
+  h1 { font-size: 22px; }
+  p.sub { color: #9aa0b8; font-size: 14px; line-height: 1.5; }
+  .card { background: #1a1f2b; border: 1px solid #2a3145; border-radius: 12px; padding: 18px 20px; margin: 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .card h3 { margin: 0 0 4px; font-size: 15px; }
+  .card p { margin: 0; color: #9aa0b8; font-size: 13px; line-height: 1.45; }
+  .btn { flex: none; background: #2e7d32; color: #fff; border: 0; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .btn.alt { background: #575d84; }
+  .btn:hover { filter: brightness(1.1); }
+  .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 8px; vertical-align: middle; }
+  .tag.bad { background: #3a2430; color: #ff8a9b; }
+  .tag.good { background: #1e3a26; color: #7ee2a8; }
+  code { background: #0d1017; padding: 1px 6px; border-radius: 4px; font-size: 12px; color: #ffd54f; }
+  details { margin-top: 28px; color: #9aa0b8; font-size: 13px; line-height: 1.6; }
+  details summary { cursor: pointer; color: #e8eaf2; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎛️ Bypass Gate — Test Bench</h1>
+  <p class="sub">
+    This is the <b>mock of a vplink-style ad-gate page</b> used to test the
+    <code>Bypass Gate – TIMER SKIP</code> userscript. Each test page below loads the mock
+    gate with one of the scripts injected (same way Tampermonkey would,
+    <code>@grant none</code> page context). The countdown is <b>5s</b> on stage 1.
+    When the script unlocks the button, <b>click it yourself</b> (manual mode) and watch
+    the status panel top-right.
+  </p>
+
+  <div class="card">
+    <div>
+      <h3>Fixed v5.4 <span class="tag good">13/13 tests pass</span></h3>
+      <p>Case- &amp; punctuation-insensitive keywords, re-checks elements that later become
+      gates, no auto-click. Expects: both overlays + the late “bonus” toast disappear,
+      buttons unlock before the timer ends, you click through to ✅.</p>
+    </div>
+    <a class="btn" href="gate-page.html?script=fixed&wait=5">▶ Run gate + v5.4</a>
+  </div>
+
+  <div class="card">
+    <div>
+      <h3>Original v5.3-TIMER <span class="tag bad">7/13 tests pass</span></h3>
+      <p>As pasted. Expects: the gate overlays and the late “bonus” toast stay on screen
+      (keyword case bug + processed-set bug) even though the buttons still get unlocked —
+      you can click through, but the ad layers remain covering the page.</p>
+    </div>
+    <a class="btn alt" href="gate-page.html?script=original&wait=5">▶ Run gate + v5.3</a>
+  </div>
+
+  <details>
+    <summary>How the mock page works (what the tests check)</summary>
+    <p>
+      • <b>Gate 1</b> — full overlay “⚡ Click ads &amp; wait” + separate disabled
+      <b>Get Link</b> button, 5s site countdown (the site itself would unlock it at 0).<br>
+      • <b>Gate 2</b> — brand-new overlay “🔗 Get link - download ready” + disabled
+      <b>Continue</b> button, created only when you click Get Link.<br>
+      • <b>Gate 3</b> — a pre-existing corner toast that says “🎁 Preparing bonus…” and whose
+      <i>text changes</i> to gate text 3s after load (traps scripts that cache elements at first scan).<br>
+      • <b>Decoy</b> — a footer “Download original” link, also locked, to see how aggressive
+      force-enabling is.<br>
+      • A status panel (top-right, from the script) shows what the script itself reports.
+    </p>
+  </details>
+</div>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VPLINK Mock Gate — Test Fixture</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; background: #f2f4f8; }
+  .content { max-width: 640px; margin: 40px auto; padding: 0 16px; }
+  .content h1 { font-size: 20px; color: #222; }
+  .file-row { background: #fff; border: 1px solid #dde; border-radius: 8px; padding: 12px 14px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+  .file-row a { color: #1565c0; text-decoration: none; font-weight: bold; }
+  footer { text-align: center; color: #777; font-size: 12px; padding: 24px; }
+  footer a { color: #999; text-decoration: none; }
+  .ad-tile { background: linear-gradient(135deg, #3a3f5b, #575d84); color: #fff; border-radius: 8px; padding: 18px; text-align: center; margin: 14px auto; max-width: 320px; }
+  .ad-tile small { opacity: .8; }
+  .cd { font-size: 30px; font-weight: bold; margin: 14px 0; color: #ffd54f; }
+  .gl-btn { font-size: 18px; font-weight: bold; padding: 14px 44px; border: none; border-radius: 10px; background: #2e7d32; color: #fff; cursor: pointer; }
+  .gl-btn:disabled, .gl-btn.disabled { background: #7a8a7b; cursor: default; }
+  #success { background: #1b5e20; color: #fff; text-align: center; padding: 40px 16px; font-size: 18px; }
+</style>
+</head>
+<body style="overflow:hidden">
+
+  <!-- ===== real page content (behind the gate) ===== -->
+  <div class="content">
+    <h1>📚 Study Pack 2026 — Free Download</h1>
+    <div class="file-row"><span>study-pack-2026.zip (148 MB)</span><span>⬇ 4.2k downloads</span></div>
+    <div class="file-row"><span>study-pack-2026.pdf (22 MB)</span><span>⬇ 1.1k downloads</span></div>
+  </div>
+  <footer>
+    Need the full archive? <a id="dl-footer" class="locked" href="#" style="pointer-events:none;opacity:0.4">Download original (10 MB)</a>
+  </footer>
+
+  <!-- ===== GATE 1: full overlay + separate Get Link button (typical vplink layout) ===== -->
+  <div id="ad-gate" style="position:fixed;inset:0;z-index:99999;background:rgba(15,17,30,0.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="font-size:22px;font-weight:bold;">⚡ Click ads &amp; wait</div>
+    <div style="color:#9aa0c3;font-size:13px;margin-top:6px;">Your link unlocks while the timer runs…</div>
+    <div class="ad-tile"><div>📢 Sponsored: Mega Courses 50% off</div><small>ad.example — do not click (test fixture)</small></div>
+    <div class="cd" id="cd1">4s</div>
+  </div>
+  <button id="getlink1" class="gl-btn disabled" disabled style="position:fixed;left:50%;transform:translateX(-50%);bottom:36px;z-index:100000;pointer-events:none;opacity:0.5;">Get Link</button>
+
+  <!-- ===== GATE 2: appears after first Get Link (created at click time) ===== -->
+  <div id="gate2" style="position:fixed;inset:0;z-index:99999;background:rgba(30,15,15,0.96);color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="font-size:22px;font-weight:bold;">🔗 Get link - download ready</div>
+    <div style="color:#c39a9a;font-size:13px;margin-top:6px;">One last step, almost there…</div>
+    <div class="cd" id="cd2">2s</div>
+  </div>
+  <button id="cont2" class="gl-btn disabled" disabled style="position:fixed;left:50%;transform:translateX(-50%);bottom:36px;z-index:100000;pointer-events:none;opacity:0.5;display:none;">Continue</button>
+
+  <!-- ===== GATE 3: pre-existing toast whose text LATER becomes gate text (processed-set trap) ===== -->
+  <div id="promo" style="position:fixed;left:12px;bottom:12px;z-index:99998;background:#222;color:#ffd54f;padding:10px 14px;border-radius:8px;font-size:13px;">🎁 Preparing bonus…</div>
+
+  <!-- ===== success state ===== -->
+  <div id="success" style="position:fixed;inset:0;z-index:1000001;display:none;"></div>
+
+<script>
+(function () {
+  'use strict';
+  var params = new URLSearchParams(location.search);
+  var wait1 = Math.max(2, parseInt(params.get('wait') || '15', 10) || 15);
+  var wait2 = Math.max(2, Math.ceil(wait1 / 5));
+  var remaining1 = wait1, remaining2 = wait2;
+
+  window.__clickLog = [];   // every click that reached a gate button handler
+  window.__gateDone = false;
+  window.__gate = { wait1: wait1, wait2: wait2 };
+
+  var cd1 = document.getElementById('cd1');
+  var cd2 = document.getElementById('cd2');
+  var getlink1 = document.getElementById('getlink1');
+  var cont2 = document.getElementById('cont2');
+  var adGate = document.getElementById('ad-gate');
+  var gate2 = document.getElementById('gate2');
+
+  // site's own countdown for gate 1
+  var iv1 = setInterval(function () {
+    remaining1--;
+    if (remaining1 <= 0) {
+      cd1.textContent = 'Ready!';
+      clearInterval(iv1);
+      siteEnable(getlink1);           // the site itself would unlock now
+    } else {
+      cd1.textContent = remaining1 + 's';
+    }
+  }, 1000);
+
+  function siteEnable(btn) {
+    btn.disabled = false;
+    btn.removeAttribute('disabled');
+    btn.classList.remove('disabled');
+    btn.style.pointerEvents = 'auto';
+    btn.style.opacity = '1';
+  }
+
+  getlink1.addEventListener('click', function () {
+    window.__clickLog.push({ id: 'getlink1', t: Date.now() });
+    if (getlink1.disabled) return;    // site ignores clicks while locked
+    adGate.style.display = 'none';
+    setTimeout(function () {
+      gate2.style.display = 'flex';
+      cont2.style.display = 'block';
+      var iv2 = setInterval(function () {
+        remaining2--;
+        if (remaining2 <= 0) {
+          cd2.textContent = 'Ready!';
+          clearInterval(iv2);
+          siteEnable(cont2);
+        } else {
+          cd2.textContent = remaining2 + 's';
+        }
+      }, 1000);
+    }, 400);
+  });
+
+  cont2.addEventListener('click', function () {
+    window.__clickLog.push({ id: 'cont2', t: Date.now() });
+    if (cont2.disabled) return;
+    window.__gateDone = true;
+    var s = document.getElementById('success');
+    s.style.display = 'block';
+    s.innerHTML = '✅ You\u2019ve got your link! → <a href="http://files.example/study-pack-2026.zip" style="color:#ffd54f">study-pack-2026.zip</a>';
+    document.body.style.overflow = '';
+  });
+
+  // GATE 3 trap: existing element whose text turns into gate text 3s after load
+  setTimeout(function () {
+    document.getElementById('promo').textContent = '⏳ Click ads & wait for bonus link';
+  }, 3000);
+
+  // ---- self-injection for the live preview (real browser only) ----
+  // ?script=original  -> loads original.user.js
+  // ?script=fixed     -> loads bypass-gate-timer-skip.user.js
+  // (jsdom test harness omits the param and injects the script itself)
+  var v = params.get('script');
+  if (v === 'original' || v === 'fixed') {
+    var src = (v === 'original') ? 'original.user.js' : 'bypass-gate-timer-skip.user.js';
+    fetch(src)
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        var code = t.replace(/^\s*\/\/ ==\/UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/, '');
+        window.eval(code);
+      })
+      .catch(function (e) { document.title = 'injection failed: ' + e.message; });
+  }
+})();
+</script>
+</body>
+</html>
